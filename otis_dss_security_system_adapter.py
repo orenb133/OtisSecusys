@@ -576,7 +576,7 @@ config.interactiveReceivePort = 45303
 config.interactiveSendPortDes = 46303
 config.interactiveReceiveTimeout = 0
 config.interactiveDuplicatesCacheSize = 5
-config.interactiveSendRetryIntreval = 1
+config.interactiveSendRetryIntreval = 1.0
 config.interactiveSendMaxRetries = 5
 
 config.heartbeatSendMcGroup = '234.46.30.7'
