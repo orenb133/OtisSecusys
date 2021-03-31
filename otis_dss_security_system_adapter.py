@@ -107,6 +107,7 @@ class _PacketInteractiveAck(typing.NamedTuple, _PacketInteractiveBase):
         return struct.pack('IHI', self.packetId, self.TYPE, int(self.ackType))
 
     def react(self, ddsContext, configuration, securitySystemInterface):
+        print ("Received ACK: packet=%s decIp=%s" % (self))
         ddsContext.ackPacket(self.packetId)
 
 #======================================================================================================================
@@ -128,16 +129,17 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
 
     def react(self, ddsContext, configuration, securitySystemInterface):
 
-        for i in range self.onlineDecMap:
-            decIp = "%s.%s.%s" % ('.'.join(ddsContext.des.split('.')[0:2]), self.decSubnetId, i)
-            packet = _PacketInteractiveDecSecurityOperationModeV2(ddsContext.sequenceNumber, 
-                                                                  [0] * 7 # Not using features
-                                                                  configuration.decOperationMode, 
-                                                                  [0] * 256, # No allowed floors
-                                                                  [0] * 256,
-                                                                  0)
-
-            ddsContext.sendPacket(packet, decIp, configuration.interactiveSendPortDec)
+        for i in range(len(self.onlineDecMap)):
+            if self.onlineDecMap[i] == 1:
+                decIp = "%s.%s.%s" % ('.'.join(ddsContext.desIp.split('.')[0:2]), self.decSubnetId, i)
+                packet = _PacketInteractiveDecSecurityOperationModeV2(ddsContext.sequenceNumber, 
+                                                                    [0] * 7, # Not using features
+                                                                    configuration.decOperationMode, 
+                                                                    [0] * 256, # No allowed floors
+                                                                    [0] * 256,
+                                                                    0)
+                print ("Sending Packet to DEC: packet=%s decIp=%s" % (packet, decIp))
+                ddsContext.sendPacket(packet, decIp, configuration.interactiveSendPortDec)
 
         return True
 
@@ -150,7 +152,7 @@ class _PacketInteractiveDecSecurityOperationModeV2(typing.NamedTuple, _PacketInt
     mode                  : int                                       # B   (uint8)
     allowedFloorsFrontMap : list                                      # 32s (32 * uint8)
     allowedFloorsRearMap  : list                                      # 32s (32 * uint8)
-    reserved              : int                                       # 32s (32 * uint8)
+    reserved              : int                                       # B   (uint8)
 
     @classmethod
     def s_createFromRaw(self, rawPacket, packetId):
@@ -165,7 +167,7 @@ class _PacketInteractiveDecSecurityOperationModeV2(typing.NamedTuple, _PacketInt
                                                     reserved)
 
     def packed(self):
-        return struct.pack('IH1s32s32sB', 
+        return struct.pack('IH1sB32s32sB', 
                         self.packetId, 
                         self.TYPE, 
                         _PacketBase._s_packBitList(self.featuresMap), 
@@ -306,7 +308,7 @@ class OtisDdsSecuritySystemAdapter:
             self.__duplicatesCache = collections.OrderedDict()
             self.__desIp = desIp
             self.__unackBacklog = collections.OrderedDict()
-            self.__socket = None
+            self.__socket = socket
 
         @property
         def isDesOnline(self):
@@ -390,11 +392,17 @@ class OtisDdsSecuritySystemAdapter:
         self.__heartbeatSendSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32) 
         self.__heartbeatSendSocket.bind((configuration.localIp, 0))
         
-        # Initializing Interactive socket
+        # Initializing Interactive DES socket
         self.__interactiveSocketDes = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__interactiveSocketDes.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.__interactiveSocketDes.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
-        self.__interactiveSocketDes.bind((configuration.localIp, configuration.interactiveReceivePort))
+        self.__interactiveSocketDes.bind((configuration.localIp, configuration.interactiveReceivePortDes))
+
+        # Initializing Interactive DES socket
+        self.__interactiveSocketDec = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.__interactiveSocketDec.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.__interactiveSocketDec.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
+        self.__interactiveSocketDec.bind((configuration.localIp, configuration.interactiveReceivePortDec))
 
         # Registering Packets
         self.__registerPacketClass(_PacketInteractiveAck)
@@ -410,6 +418,7 @@ class OtisDdsSecuritySystemAdapter:
             self.__handleHeartbeatSend()
             self.__handleHeartbeatReceive()
             self.__handleInteractive(self.__interactiveSocketDes)
+            self.__handleInteractive(self.__interactiveSocketDec)
 
             time.sleep(0.5)
 
@@ -587,7 +596,8 @@ config.heartbeatReceiveTimeout = 3.0
 
 config.localIp = '192.168.1.50'
 
-config.interactiveReceivePort = 45303
+config.interactiveReceivePortDes = 45303
+config.interactiveReceivePortDec = 46308
 config.interactiveSendPortDes = 46303
 config.interactiveSendPortDec = 45308
 config.interactiveDuplicatesCacheSize = 5
