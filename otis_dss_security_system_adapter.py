@@ -265,7 +265,6 @@ class OtisDdsSecuritySystemAdapter:
         localIp : str = ''
 
         interactiveSendMaxRetries        : int = 0
-        interactiveReceiveTimeout        : int = 0
         interactiveReceivePort           : int = 0
         interactiveSendPortDes           : int = 0
         interactiveDuplicatesCacheSize   : int = 0
@@ -574,7 +573,6 @@ config.localIp = '192.168.1.50'
 
 config.interactiveReceivePort = 45303
 config.interactiveSendPortDes = 46303
-config.interactiveReceiveTimeout = 0
 config.interactiveDuplicatesCacheSize = 5
 config.interactiveSendRetryIntreval = 1.0
 config.interactiveSendMaxRetries = 5
