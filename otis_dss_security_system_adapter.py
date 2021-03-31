@@ -543,10 +543,12 @@ class OtisDdsSecuritySystemAdapter:
                         unackBacklogItem.retryCout = unackBacklogItem.retryCout + 1
 
                         # If we haven't reached the limit for packet resend push it back to the backlog
-                        if unackBacklogItem.retryCout < self.__configuration.interactiveSendRetryIntreval:
+                        if unackBacklogItem.retryCout < self.__configuration.interactiveSendMaxRetries:
                             ddsContext._unackBacklog[packetId] = unackBacklogItem
                     else:
-                        # Breaking as items are sorted by time within the backlog
+                        # Pusing back to front and breaking as items are sorted by time within the backlog
+                        ddsContext._unackBacklog[packetId] = unackBacklogItem
+                        ddsContext._unackBacklog.move_to_end(packetId, last = False)
                         break
 
 #-----------------------------------------------------------------------------------------------------------------------
