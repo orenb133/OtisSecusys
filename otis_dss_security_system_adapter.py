@@ -73,10 +73,11 @@ class _PacketHeartbeat(typing.NamedTuple, _PacketBase):
 #======================================================================================================================
 class _PacketInteractiveBase(_PacketBase):
 
-    def react(self, ddsContext, securitySystemInterface):
+    def react(self, ddsContext, configuration, securitySystemInterface):
         """ React upon receiving this packet
         Params:
             desContext - Context of the relevant DDS
+            configuration - System configuration structure
             securitySystemInterface - Security system interface for interacting with security system
         Returns: 
             True iff reaction was succesfull 
@@ -105,7 +106,7 @@ class _PacketInteractiveAck(typing.NamedTuple, _PacketInteractiveBase):
     def packed(self):
         return struct.pack('IHI', self.packetId, self.TYPE, int(self.ackType))
 
-    def react(self, ddsContext, securitySystemInterface):
+    def react(self, ddsContext, configuration, securitySystemInterface):
         ddsContext.ackPacket(self.packetId)
 
 #======================================================================================================================
@@ -125,7 +126,19 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
     def packed(self):
         return struct.pack('IHB32s', self.packetId, self.TYPE, self.decSubnetId, _PacketBase._s_packBitList(self.onlineDecMap))
 
-    def react(self, ddsContext, securitySystemInterface):
+    def react(self, ddsContext, configuration, securitySystemInterface):
+
+        for i in range self.onlineDecMap:
+            decIp = "%s.%s.%s" % ('.'.join(ddsContext.des.split('.')[0:2]), self.decSubnetId, i)
+            packet = _PacketInteractiveDecSecurityOperationModeV2(ddsContext.sequenceNumber, 
+                                                                  [0] * 7 # Not using features
+                                                                  configuration.decOperationMode, 
+                                                                  [0] * 256, # No allowed floors
+                                                                  [0] * 256,
+                                                                  0)
+
+            ddsContext.sendPacket(packet, decIp, configuration.interactiveSendPortDec)
+
         return True
 
 #======================================================================================================================
@@ -267,8 +280,11 @@ class OtisDdsSecuritySystemAdapter:
         interactiveSendMaxRetries        : int = 0
         interactiveReceivePort           : int = 0
         interactiveSendPortDes           : int = 0
+        interactiveSendPortDec           : int = 0
         interactiveDuplicatesCacheSize   : int = 0
         interactiveSendRetryIntreval     : int = 0
+
+        decOperationMode                 : int = 0
 
 #-----------------------------------------------------------------------------------------------------------------------
     class _DdsContext:
@@ -465,7 +481,7 @@ class OtisDdsSecuritySystemAdapter:
                         packet = packetClass.s_createFromRaw(packetRaw, packetId)
                         print ("Received interactive packet: packet=%s peerTuple=%s" % (packet, peerTuple))
 
-                        wasPacketProcessed = packet.react(ddsContext, self.__securitySystemInterface)
+                        wasPacketProcessed = packet.react(ddsContext, self.__configuration, self.__securitySystemInterface)
 
                         if wasPacketProcessed:
                             ackPacketType = _PacketInteractiveAck.AckType.Acceptable
@@ -573,6 +589,7 @@ config.localIp = '192.168.1.50'
 
 config.interactiveReceivePort = 45303
 config.interactiveSendPortDes = 46303
+config.interactiveSendPortDec = 45308
 config.interactiveDuplicatesCacheSize = 5
 config.interactiveSendRetryIntreval = 1.0
 config.interactiveSendMaxRetries = 5
@@ -580,6 +597,8 @@ config.interactiveSendMaxRetries = 5
 config.heartbeatSendMcGroup = '234.46.30.7'
 config.heartbeatSendPort = 48307
 config.heartbeatSendInterval = 1
+
+config.decOperationMode = 1
 
 ssAdapter = OtisDdsSecuritySystemAdapter(config, None)
 ssAdapter.start()
