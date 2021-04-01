@@ -4,7 +4,7 @@ import enum
 import typing
 
 #======================================================================================================================
- class _InteractiveReactor:
+class _InteractiveReactor:
 
         class DenChannelType(enum.IntEnum):
             Des = 0
