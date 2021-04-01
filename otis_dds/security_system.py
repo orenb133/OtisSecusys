@@ -34,7 +34,8 @@ class Adapter:
         localIp                          : str = ''
 
         interactiveSendMaxRetries        : int = 0
-        interactiveReceivePort           : int = 0
+        interactiveReceivePortDes        : int = 0
+        interactiveReceivePortDec        : int = 0
         interactiveSendPortDes           : int = 0
         interactiveSendPortDec           : int = 0
         interactiveDuplicatesCacheSize   : int = 0
@@ -49,8 +50,12 @@ class Adapter:
         self.__interactivePacketClasses = {}
         self.__interactivePacketsRectors = {}
         self.__heartbeatSendNextTime = time.monotonic() + self.__configuration.heartbeatSendInterval
-        self.__heartbeatSendPacket = _PacketHeartbeat(_PacketHeartbeat.SourceType.SS, self.ICD_MAJOR, self.ICD_MINOR, 
-                                                   self.ICD_MAJOR, self.ICD_MINOR)
+        self.__heartbeatSendPacket = packets._PacketHeartbeat(packets._PacketHeartbeat.SourceType.SS, 
+                                                             self.ICD_MAJOR, 
+                                                             self.ICD_MINOR, 
+                                                             self.ICD_MAJOR, 
+                                                             self.ICD_MINOR)
+      
         self.__heartbeatSendPacketPacked = self.__heartbeatSendPacket.packed()
         self.__securitySystemInterface = securitySystemInterface
 
@@ -80,11 +85,11 @@ class Adapter:
         self.__interactiveSocketDec.bind((configuration.localIp, configuration.interactiveReceivePortDec))
 
         # Registering Packets
-        self.__registerPacketClass(_PacketInteractiveAck)
-        self.__registerPacketClass(_PacketInteractiveDecOnlineStatus)
-        self.__registerPacketClass(_PacketInteractiveDecSecurityCredentialData)
-        self.__registerPacketClass(_PacketInteractiveDecSecurityOperationModeV2)
-        self.__registerPacketClass(_PacketInteractiveDecSecurityAutorizedDefaultFloorV2)
+        self.__registerPacketClass(packets._PacketInteractiveAck)
+        self.__registerPacketClass(packets._PacketInteractiveDecOnlineStatus)
+        self.__registerPacketClass(packets._PacketInteractiveDecSecurityCredentialData)
+        self.__registerPacketClass(packets._PacketInteractiveDecSecurityOperationModeV2)
+        self.__registerPacketClass(packets._PacketInteractiveDecSecurityAutorizedDefaultFloorV2)
 
 
 #-----------------------------------------------------------------------------------------------------------------------  
@@ -134,10 +139,10 @@ class Adapter:
             reactor = self.__interactivePacketsRectors.get(self.__removeLastIpOctet(peerTuple[0]), None)
 
             if reactor is not None:
-                reactor._handlePacket(packetRaw, packetId, peerTuple, denSocket)
+                reactor._handlePacket(packetRaw, packetId, packetType, peerTuple)
 
             else:
-                print ("Received unexpected interactive packet, discarding: packetRaw=%s peerTuple=%s packetId=" % 
+                print ("Received unexpected interactive packet, discarding: packetRaw=%s peerTuple=%s packetId=%s" % 
                        (packetRaw, peerTuple, packetId))
       
         except socket.timeout:
@@ -154,7 +159,7 @@ class Adapter:
             # Receive a heartbeat packet
             packetRaw, desTuple  = self.__heartbeatReceiveSocket.recvfrom(4096)
             desIp = desTuple[0]
-            heartbeatPacket = _PacketHeartbeat.s_createFromRaw(packetRaw)
+            heartbeatPacket = packets._PacketHeartbeat.s_createFromRaw(packetRaw)
             #print ("Received heartbeat packet: packet=%s desTuple=%s" % (heartbeatPacket, desTuple))
 
             # Get context or create and add if needed
@@ -169,7 +174,10 @@ class Adapter:
                                                                         self.__configuration, 
                                                                         self.__interactiveSocketDes, 
                                                                         self.__interactiveSocketDec, 
-                                                                        self.__interactivePacketClasses)
+                                                                        self.__interactivePacketClasses,
+                                                                        self.__securitySystemInterface)
+
+                self.__interactivePacketsRectors[reactorKey] = interactivePacketsReactor
 
             # Update heartbeat data
             interactivePacketsReactor._lastHeartbeatTime = now
@@ -208,6 +216,6 @@ config.heartbeatSendInterval = 1
 
 config.decOperationMode = 1
 
-ssAdapter = Adapter(config, None)
+ssAdapter = Adapter(None, config, None)
 ssAdapter.start()
 
