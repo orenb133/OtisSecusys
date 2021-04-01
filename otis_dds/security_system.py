@@ -118,9 +118,9 @@ class Adapter:
         """
         Start the Adapter
         """
-
         if not self.__shouldRun:
             self.__logger.info("Starting adapter!")
+            self.__shouldRun = True
 
             while self.__shouldRun:
                 self.__handleHeartbeatSend()
@@ -128,18 +128,14 @@ class Adapter:
                 self.__handleInteractive(self.__interactiveSocketDes)
                 self.__handleInteractive(self.__interactiveSocketDec)
 
-                time.sleep(0.5)
-
 #-----------------------------------------------------------------------------------------------------------------------  
     def stop(self):
-        self.__logger.info("Stopping adapter!")
-        while self.__shouldRun:
-            self.__handleHeartbeatSend()
-            self.__handleHeartbeatReceive()
-            self.__handleInteractive(self.__interactiveSocketDes)
-            self.__handleInteractive(self.__interactiveSocketDec)
-
-            time.sleep(0.5)
+        """
+        Stop the Adapter
+        """
+        if self.__shouldRun:
+            self.__logger.info("Stopping adapter!")
+            self.__shouldRun = False
 #-----------------------------------------------------------------------------------------------------------------------        
     def __registerPacketClass(self, packetClass):
         self.__logger.info("Registering packet: packetClass=%s", packetClass)
