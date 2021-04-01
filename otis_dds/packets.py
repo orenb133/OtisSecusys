@@ -180,7 +180,7 @@ class _InteractiveReactor:
                                                                                             unAckedSentPacket.peerTuple)
                         except Exception as e:
                             self.__logger.exception("Failed sending unacked backloged packet: unAckedSentPacket=%s", 
-                                                    unAckedSentPacket))
+                                                    unAckedSentPacket)
 
                         # Update backlog item
                         unAckedSentPacket.lastSendTime = now
