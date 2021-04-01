@@ -271,7 +271,19 @@ config.heartbeatSendPort = 48307
 config.heartbeatSendInterval = 1
 
 config.decOperationMode = 1
-logging.basicConfig(level=logging.DEBUG)
-ssAdapter = Adapter(logging.getLogger(), config, None)
+
+
+logger = logging.getLogger('Adapter')
+logger.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(ch)
+
+ssAdapter = Adapter(logger, config, None)
 ssAdapter.start()
 
