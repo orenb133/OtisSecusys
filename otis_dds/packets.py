@@ -131,8 +131,8 @@ class _InteractiveReactor:
 
                     if packetClass is None:
                         ackType = _PacketInteractiveAck.AckType.Unsupported
-                        self.__logger.warning("Received unsupported interactive packet: packetRaw=%s peerTuple=%s" 
-                                            packetRaw, peerTuple))
+                        self.__logger.warning("Received unsupported interactive packet: packetRaw=%s peerTuple=%s", 
+                                            packetRaw, peerTuple)
 
                     else:
                         # We have a packet, let's create and react with it
