@@ -150,7 +150,7 @@ class _InteractiveReactor:
                     ackPacket = _PacketInteractiveAck(packetId, ackType)
                     denChannel = self.__denChannelByPeerPort[peerTuple[1]]
                     peerTuple = (peerTuple[0], self.__denSendPortByChannel[denChannel])
-                    self.__logger.debug("Sending ack packet to peer: packet=%s peerTuple=%s" % ackPacket, peerTuple)
+                    self.__logger.debug("Sending ack packet to peer: packet=%s peerTuple=%s", ackPacket, peerTuple)
                     self.__denSocketsByChannel[denChannel].sendto(ackPacket.packed(), peerTuple)
           
             except Exception as e:
