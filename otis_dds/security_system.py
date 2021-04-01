@@ -119,7 +119,7 @@ class Adapter:
         Start the Adapter
         """
         if not self.__shouldRun:
-            self.__logger.info("Starting adapter!")
+            self.__logger.info("Starting security system adapter!")
             self.__shouldRun = True
 
             while self.__shouldRun:
@@ -134,7 +134,7 @@ class Adapter:
         Stop the Adapter
         """
         if self.__shouldRun:
-            self.__logger.info("Stopping adapter!")
+            self.__logger.info("Stopping security system adapter!")
             self.__shouldRun = False
 #-----------------------------------------------------------------------------------------------------------------------        
     def __registerPacketClass(self, packetClass):
