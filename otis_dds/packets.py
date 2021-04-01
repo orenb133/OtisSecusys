@@ -28,7 +28,7 @@ class _InteractiveReactor:
             self.__lastHeartbeatTime = 0
             self.__isDesOnline  = False
             self.__sequenceNumber = 0
-            self.__onlineDecMap = []
+            self.__onlineDecMap = [0] * 256
             self.__duplicatesCache = collections.OrderedDict()
             self.__unAckedBacklog = collections.OrderedDict()
             self.__configuration = configuration
