@@ -134,7 +134,7 @@ class Adapter:
         Stop the Adapter
         """
         if self.__shouldRun:
-            self.__logger.info("Stopping security system adapter!")
+            self.__logger.info("Stopping ecurity system adapter!")
             self.__shouldRun = False
 #-----------------------------------------------------------------------------------------------------------------------        
     def __registerPacketClass(self, packetClass):
@@ -185,7 +185,7 @@ class Adapter:
                                           "discarding: packetRaw=%s packetId=%s peerTuple=%s", 
                                            packetRaw, packetId, peerTuple)
             except Exception as e:
-                self.__logger.debug("Failed receiving and handling interactive packet")
+                self.__logger.exception("Failed receiving and handling interactive packet")
       
         except socket.timeout:
             # Handle unacked send packets on timeout
@@ -194,7 +194,7 @@ class Adapter:
                     reactor._handleUnAckedPackets()
           
             except Exception as e:
-                self.__logger.debug("Failed handling send un-acked packets")
+                self.__logger.exception("Failed handling send un-acked packets")
        
 #-----------------------------------------------------------------------------------------------------------------------
     def __handleHeartbeatReceive(self):        
