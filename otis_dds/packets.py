@@ -96,7 +96,7 @@ import typing
                 del self.__unAckedBacklog[packetId]
 
 #----------------------------------------------------------------------------------------------------------------------
-        def _handleInteractivePacket(self, rawPacket, packetId, peerTuple, denSocket):
+        def _handlePacket(self, rawPacket, packetId, peerTuple, denSocket):
 
             # Filter duplicates
             if packetId in self.__duplicatesCache:

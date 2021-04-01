@@ -43,7 +43,8 @@ class Adapter:
         decOperationMode                 : int = 0      
 
 #-----------------------------------------------------------------------------------------------------------------------
-    def __init__(self, configuration, securitySystemInterface):
+    def __init__(self, logger, configuration, securitySystemInterface):
+        self.__logger = logger
         self.__configuration = configuration
         self.__interactivePacketClasses = {}
         self.__interactivePacketsRectors = {}
@@ -133,10 +134,15 @@ class Adapter:
             reactor = self.__interactivePacketsRectors.get(self.__removeLastIpOctet(peerTuple[0]), None)
 
             if reactor is not None:
-                reactor._handleInteractivePacket(packetRaw, packetId, peerTuple, denSocket)
+                reactor._handlePacket(packetRaw, packetId, peerTuple, denSocket)
+
+            else:
+                print ("Received unexpected interactive packet, discarding: packetRaw=%s peerTuple=%s packetId=" % 
+                       (packetRaw, peerTuple, packetId))
       
         except socket.timeout:
 
+            # Handle unacked send packets on timeout
             for reactor in self.__interactivePacketsRectors.values():
                 reactor._handleUnAckedPackets()
        
@@ -152,32 +158,33 @@ class Adapter:
             #print ("Received heartbeat packet: packet=%s desTuple=%s" % (heartbeatPacket, desTuple))
 
             # Get context or create and add if needed
-            ddsContext = None
-            ddsContextKey = self.__removeLastIpOctet(desIp)
 
-            if not self.__ddsContexts.get(ddsContextKey, None):
-                print ("New DES discovered: desIp=%s" % desIp)
-                ddsContext = self._DdsContext(desIp, self.__interactiveSocketDes)
-                
-                self.__ddsContexts[ddsContextKey] = ddsContext
+            reactorKey = self.__removeLastIpOctet(desIp)
+            interactivePacketsReactor = self.__interactivePacketsRectors.get(reactorKey, None)
 
-            else:
-                ddsContext = self.__ddsContexts[ddsContextKey]
+            if interactivePacketsReactor is None:
+                print ("New DES discovered, creating Interactive Packet Reactor: desIp=%s" % desIp)
+                interactivePacketsReactor = packets._InteractiveReactor(self.__logger, 
+                                                                        desIp, 
+                                                                        self.__configuration, 
+                                                                        self.__interactiveSocketDes, 
+                                                                        self.__interactiveSocketDec, 
+                                                                        self.__interactivePacketClasses)
 
-            # Update context
-            ddsContext._lastHeartbeatTime = now
+            # Update heartbeat data
+            interactivePacketsReactor._lastHeartbeatTime = now
            
-            if not ddsContext.isDesOnline:
+            if not interactivePacketsReactor.isDesOnline:
                 print ("DES became online: desIp=%s" % desIp)
-                ddsContext._setDesOnline(True)
+                interactivePacketsReactor._setDesOnline(True)
        
         except socket.timeout:
             # Check if a DES had timed out
-            for ddsContext in self.__ddsContexts.values():
+            for reactor in self.__interactivePacketsRectors.values():
                 
-                if ddsContext.isDesOnline and (now - ddsContext._lastHeartbeatTime) > self.__configuration.heartbeatReceiveTimeout:
-                    print ("DES became offline: desIp=%s" % ddsContext.desIp)
-                    ddsContext._setDesOnline(False)
+                if reactor.isDesOnline and (now - reactor._lastHeartbeatTime) > self.__configuration.heartbeatReceiveTimeout:
+                    print ("DES became offline: desIp=%s" % reactor.desIp)
+                    reactor._setDesOnline(False)
 
 
 config = Adapter.Configuration()
