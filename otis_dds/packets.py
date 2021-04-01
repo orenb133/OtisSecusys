@@ -28,7 +28,7 @@ class _InteractiveReactor:
             self.__lastHeartbeatTime = 0
             self.__isDesOnline  = False
             self.__sequenceNumber = 0
-            self.__onlineDecIds = []
+            self.__onlineDecMap = []
             self.__duplicatesCache = collections.OrderedDict()
             self.__unAckedBacklog = collections.OrderedDict()
             self.__configuration = configuration
@@ -48,6 +48,11 @@ class _InteractiveReactor:
 
 #----------------------------------------------------------------------------------------------------------------------
         @property
+        def logger(self):
+            return self.__logger
+
+#----------------------------------------------------------------------------------------------------------------------
+        @property
         def isDesOnline(self):
             return self.__isDesOnline
 
@@ -63,13 +68,13 @@ class _InteractiveReactor:
 
 #----------------------------------------------------------------------------------------------------------------------
         @property
-        def onlineDecIds(self):
-            return self.__onlineDecIds
+        def onlineDecMap(self):
+            return self.__onlineDecMap
 
 #----------------------------------------------------------------------------------------------------------------------
-        @onlineDecIds.setter
-        def onlineDecIds(self, onlineDecIds):
-            self.__onlineDecIds = onlineDecIds
+        @onlineDecMap.setter
+        def onlineDecMap(self, onlineDecMap):
+            self.__onlineDecMap = onlineDecMap
 
 #----------------------------------------------------------------------------------------------------------------------
         def sendPacket(self, packet, peerIp, denChannel):
@@ -137,7 +142,7 @@ class _InteractiveReactor:
                     else:
                         # We have a packet, let's create and react with it
                         packet = packetClass.s_createFromRaw(packetRaw, packetId)
-                        self.__logger.info("Received interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
+                        self.__logger.debug("Received interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
 
                         try:
                             packet.react(self, self.__configuration, self.__securitySystemInterface)
@@ -341,18 +346,29 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
     def react(self, reactor, configuration, securitySystemInterface):
 
         for i in range(len(self.onlineDecMap)):
-            if self.onlineDecMap[i] == 1:
+         
+            # Compare online dec maps and act on change
+            if reactor.onlineDecMap[i] != self.onlineDecMap[i]:
                 decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, i)
-                packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
-                                                                    [0] * 7, # Not using features
-                                                                    configuration.decOperationMode, 
-                                                                    [0] * 256, # No allowed floors
-                                                                    [0] * 256,
-                                                                    0)
-                print ("Sending Packet to DEC: packet=%s decIp=%s" % (packet, decIp))
-                reactor.sendPacket(packet, decIp, _InteractiveReactor.DenChannelType.Dec)
+              
+                if self.onlineDecMap[i] == 1:
+                    reactor.logger.info("DEC state was changed to Online, configuring operation mode: decIp=%s mode=", 
+                                        configuration.decOperationMode)
+                 
+                    packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
+                                                                        [0] * 7, # Not using features (TODO)
+                                                                        configuration.decOperationMode, 
+                                                                        [0] * 256, # No allowed floors
+                                                                        [0] * 256, # No allowed floors (TODO)
+                                                                        0)
 
-        return True
+                    reactor.sendPacket(packet, decIp, _InteractiveReactor.DenChannelType.Dec)
+
+                else:
+                    reactor.logger.info("DEC state was changed to Offline: decIp=%s", dec)
+
+            # Save new online DEC map
+            reactor.onlineDecMap = self.onlineDecMap
 
 #======================================================================================================================
 class _PacketInteractiveDecSecurityOperationModeV2(typing.NamedTuple, _PacketInteractiveBase):    
