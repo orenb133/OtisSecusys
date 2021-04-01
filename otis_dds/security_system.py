@@ -271,7 +271,7 @@ config.heartbeatSendPort = 48307
 config.heartbeatSendInterval = 1
 
 config.decOperationMode = 1
-
+logging.basicConfig(level=logging.DEBUG)
 ssAdapter = Adapter(logging.getLogger(), config, None)
 ssAdapter.start()
 
