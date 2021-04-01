@@ -352,7 +352,7 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                 decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, i)
               
                 if self.onlineDecMap[i] == 1:
-                    reactor.logger.info("DEC state was changed to Online, configuring operation mode: decIp=%s mode=", 
+                    reactor.logger.info("DEC state was changed to Online, configuring operation mode: decIp=%s mode=%s", 
                                         configuration.decOperationMode)
                  
                     packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
@@ -367,8 +367,8 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                 else:
                     reactor.logger.info("DEC state was changed to Offline: decIp=%s", dec)
 
-            # Save new online DEC map
-            reactor.onlineDecMap = self.onlineDecMap
+        # Save new online DEC map
+        reactor.onlineDecMap = self.onlineDecMap
 
 #======================================================================================================================
 class _PacketInteractiveDecSecurityOperationModeV2(typing.NamedTuple, _PacketInteractiveBase):    
