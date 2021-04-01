@@ -72,6 +72,28 @@ class _InteractiveReactor:
             self.__onlineDecIds = onlineDecIds
 
 #----------------------------------------------------------------------------------------------------------------------
+        def sendPacket(self, packet, peerIp, denChannel):
+            """ Send a packet
+            Params:
+                packet: Packet to send
+                peerIp: Peer IP address
+                denChannel: Den channel to send packet through
+            """
+            
+
+            peerTuple = (peerIp, self.__denSendPortByChannel[denChannel])
+            self.__denSocketsByChannel[denChannel].sendto(packet.packed(), peerTuple)
+            self.__unAckedBacklog[packet[0]] = self._UnAackedSentPacket(packet, peerTuple, time.monotonic(), denChannel)
+            self.__sequenceNumber = self.__sequenceNumber + 1
+            self.__logger.debug("Sending interactie packet: packet=%s peerTuple=%s", packet, peerIp)
+
+#----------------------------------------------------------------------------------------------------------------------
+        def _ackPacket(self, packetId):
+            if packetId in self.__unAckedBacklog:
+                self.__logger.debug("Packet was acked: packetId=%s", packetId)
+                del self.__unAckedBacklog[packetId]
+
+#----------------------------------------------------------------------------------------------------------------------
         @property
         def _lastHeartbeatTime(self):
             return self.__lastHeartbeatTime
@@ -86,122 +108,102 @@ class _InteractiveReactor:
             self.__isDesOnline = isDesOnline 
 
 #----------------------------------------------------------------------------------------------------------------------
-        def sendPacket(self, packet, peerIp, denChannel):
-            """ Send a packet
-            Params:
-                packet: Packet to send
-                peerIp: Peer IP address
-                denChannel: Den channel to send packet through
-            """
-            
-            peerTuple = (peerIp, self.__denSendPortByChannel[denChannel])
-            self.__denSocketsByChannel[denChannel].sendto(packet.packed(), peerTuple)
-            self.__unAckedBacklog[packet[0]] = self._UnAackedSentPacket(packet, peerTuple, time.monotonic(), denChannel)
-            self.__sequenceNumber = self.__sequenceNumber + 1
-
-#----------------------------------------------------------------------------------------------------------------------
-        def ackPacket(self, packetId):
-            """ Ack a packet sent to the DEN
-            Params:
-                packetId: Packet ID to ack
-            """
-            if packetId in self.__unAckedBacklog:
-                del self.__unAckedBacklog[packetId]
-
-#----------------------------------------------------------------------------------------------------------------------
         def _handlePacket(self, packetRaw, packetId, packetType, peerTuple):
-
-            # Filter duplicates
-            if packetId in self.__duplicatesCache:
-
-                print ("Received duplicate interactive packet: packetId=%s peerTuple=%s" % (packetId, peerTuple))
-                ackType = _PacketInteractiveAck.AckType.Duplicate
-                
-            else:
-                # Cache packet id
-                self.__duplicatesCache[packetId] = None
-
-                # Maintain cache size
-                if len(self.__duplicatesCache) > self.__configuration.interactiveDuplicatesCacheSize:
-                    self.__duplicatesCache.popitem(False)
-
-                # Get the appropriate packet class if supported
-                packetClass = self.__packetClasses.get(packetType, None)
-
-                if packetClass is None:
-                    print ("Received unsupported interactive packet: packetRaw=%s peerTuple=%s" % 
-                          (packetRaw, peerTuple))
-                       
-                    ackType = _PacketInteractiveAck.AckType.Unsupported
-
-                else:
-                    # We have a packet, let's create and react with it
-                    packet = packetClass.s_createFromRaw(packetRaw, packetId)
-                    print ("Received interactive packet: packet=%s peerTuple=%s" % (packet, peerTuple))
-                    
-                    wasReactionSuccesful = False
-
-                    try:
-                        wasReactionSuccesful = packet.react(self, 
-                                                            self.__configuration, 
-                                                            self.__securitySystemInterface)
-
-                    except Exception as e:
-                        print ("Failed reacting to packet: packet=%s peerTuple=%s exception=%s" % (packet, peerTuple, e))
-                  
-                    if wasReactionSuccesful:
-                        ackType = _PacketInteractiveAck.AckType.Acceptable
-                     
-                    else:
-                        ackType = _PacketInteractiveAck.AckType.Unacceptable
-
-            ackPacket = _PacketInteractiveAck(packetId, ackType)
-            denChannel = self.__denChannelByPeerPort[peerTuple[1]]
-            peerTuple = (peerTuple[0], self.__denSendPortByChannel[denChannel])
-
             try:
-                print ("Sending ack packet to peer: packet=%s peerTuple=%s" % (ackPacket, peerTuple))
+                ackType = _PacketInteractiveAck.AckType.Unacceptable
 
-                self.__denSocketsByChannel[denChannel].sendto(ackPacket.packed(), peerTuple)
+                # Filter duplicates
+                if packetId in self.__duplicatesCache:
+                    ackType = _PacketInteractiveAck.AckType.Duplicate
+                    self.__logger.warning("Received duplicate interactive packet: packetId=%s peerTuple=%s", 
+                                        packetId, peerTuple)
+                    
+                else:
+                    # Cache packet id
+                    self.__duplicatesCache[packetId] = None
+
+                    # Maintain cache size
+                    if len(self.__duplicatesCache) > self.__configuration.interactiveDuplicatesCacheSize:
+                        self.__duplicatesCache.popitem(False)
+
+                    # Get the appropriate packet class if supported
+                    packetClass = self.__packetClasses.get(packetType, None)
+
+                    if packetClass is None:
+                        ackType = _PacketInteractiveAck.AckType.Unsupported
+                        self.__logger.warning("Received unsupported interactive packet: packetRaw=%s peerTuple=%s" 
+                                            packetRaw, peerTuple))
+
+                    else:
+                        # We have a packet, let's create and react with it
+                        packet = packetClass.s_createFromRaw(packetRaw, packetId)
+                        self.__logger.warning("Received interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
+
+                        try:
+                            packet.react(self, self.__configuration, self.__securitySystemInterface)
+                            ackType = _PacketInteractiveAck.AckType.Acceptable
+
+                        except Exception as e:
+                            self.__logger.exception("Failed reacting to interactive packet: packet=%s peerTuple=%s", 
+                            packet, peerTuple)
+                    
+                    ackPacket = _PacketInteractiveAck(packetId, ackType)
+                    denChannel = self.__denChannelByPeerPort[peerTuple[1]]
+                    peerTuple = (peerTuple[0], self.__denSendPortByChannel[denChannel])
+                    self.__logger.debug("Sending ack packet to peer: packet=%s peerTuple=%s" % ackPacket, peerTuple)
+                    self.__denSocketsByChannel[denChannel].sendto(ackPacket.packed(), peerTuple)
           
             except Exception as e:
-                print ("Failed sending ack packet to peer: packet=%s peerIp=%s exception=%s" % (ackPacket, peerIp, e))
+                self.__logger.exception("Failed reacting to interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
 
 #----------------------------------------------------------------------------------------------------------------------
         def _handleUnAckedPackets(self):
-            now = time.monotonic()
+            try:
+                now = time.monotonic()
 
-            # Iterate maximum to backlog size
-            for _ in range(len(self.__unAckedBacklog)):
+                # Iterate maximum to backlog size
+                for _ in range(len(self.__unAckedBacklog)):
 
-                # Get backlog item
-                packetId, unAckedSentPacket = self.__unAckedBacklog.popitem(False)
+                    # Get backlog item
+                    packetId, unAckedSentPacket = self.__unAckedBacklog.popitem(False)
 
-                # Time to resend the packet
-                if now - unAckedSentPacket.lastSendTime > self.__configuration.interactiveSendRetryIntreval:
-                
-                    try:
-                        print ("Sending un-acked sent packet: packet=%s peerTuple=%s retryCount=%s" % 
-                        (unAckedSentPacket.packet, unAckedSentPacket.peerTuple, unAckedSentPacket.retryCount))
+                    # Time to resend the packet
+                    if now - unAckedSentPacket.lastSendTime > self.__configuration.interactiveSendRetryIntreval:
+                    
+                        try:
+                            self.__logger.debug("Sending un-acked sent packet: packet=%s peerTuple=%s retryCount=%s", 
+                                                unAckedSentPacket.packet, 
+                                                unAckedSentPacket.peerTuple, 
+                                                unAckedSentPacket.retryCount)
 
-                        self.__denSocketsByChannel[unAckedSentPacket.denChannel].sendto(unAckedSentPacket.packet.packed(), 
-                                                                                        unAckedSentPacket.peerTuple)
-                    except Exception as e:
-                        print ("Failed sending unacked backloged packet: unAckedSentPacket=%s exception=%s" % 
-                        (unAckedSentPacket, e))
+                            self.__denSocketsByChannel[unAckedSentPacket.denChannel].sendto(unAckedSentPacket.packet.packed(), 
+                                                                                            unAckedSentPacket.peerTuple)
+                        except Exception as e:
+                            self.__logger.exception("Failed sending unacked backloged packet: unAckedSentPacket=%s", 
+                                                    unAckedSentPacket))
 
-                    # Update backlog item
-                    unAckedSentPacket.lastSendTime = now
-                    unAckedSentPacket.retryCount = unAckedSentPacket.retryCount + 1
+                        # Update backlog item
+                        unAckedSentPacket.lastSendTime = now
+                        unAckedSentPacket.retryCount = unAckedSentPacket.retryCount + 1
 
-                    # If we haven't reached the limit for packet resend push it back to the backlog
-                    if unAckedSentPacket.retryCount < self.__configuration.interactiveSendMaxRetries:
+                        # If we haven't reached the limit for packet resend push it back to the backlog
+                        if unAckedSentPacket.retryCount < self.__configuration.interactiveSendMaxRetries:
+                            self.__unAckedBacklog[packetId] = unAckedSentPacket
+                    
+                        else:
+                            self.__logger.debug("Reached retry limit for un-acked sent packet:" + 
+                                                "packet=%s peerTuple=%s retryCount=%s", 
+                                                unAckedSentPacket.packet, 
+                                                unAckedSentPacket.peerTuple, 
+                                                unAckedSentPacket.retryCount)
+                    else:
+                        # Pusing back to front and breaking as items are sorted by time within the backlog
                         self.__unAckedBacklog[packetId] = unAckedSentPacket
-                else:
-                    # Pusing back to front and breaking as items are sorted by time within the backlog
-                    self.__unAckedBacklog[packetId] = unAckedSentPacket
-                    self.__unAckedBacklog.move_to_end(packetId, last = False)
-                    break
+                        self.__unAckedBacklog.move_to_end(packetId, last = False)
+                        break
+        
+            except Exception:
+                self.__logger.exception("Failed handling un-acked sent packets")
 
 #======================================================================================================================
 class _PacketBase(object):
@@ -277,10 +279,10 @@ class _PacketHeartbeat(typing.NamedTuple, _PacketBase):
 class _PacketInteractiveBase(_PacketBase):
 
 #----------------------------------------------------------------------------------------------------------------------
-    def react(self, ddsContext, configuration, securitySystemInterface):
+    def react(self, reactor, configuration, securitySystemInterface):
         """ React upon receiving this packet
         Params:
-            desContext - Context of the relevant DDS
+            Reactor - Interactive packet reactor handling packets from
             configuration - System configuration structure
             securitySystemInterface - Security system interface for interacting with security system
         Returns: 
@@ -313,9 +315,8 @@ class _PacketInteractiveAck(typing.NamedTuple, _PacketInteractiveBase):
         return struct.pack('IHI', self.packetId, self.TYPE, int(self.ackType))
 
 #----------------------------------------------------------------------------------------------------------------------
-    def react(self, ddsContext, configuration, securitySystemInterface):
-        print ("Received ACK: packet=%s decIp=%s" % (self))
-        ddsContext.ackPacket(self.packetId)
+    def react(self, reactor, configuration, securitySystemInterface):
+        reactor._ackPacket(self.packetId)
 
 #======================================================================================================================
 class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBase):    
