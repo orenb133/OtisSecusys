@@ -137,7 +137,7 @@ class _InteractiveReactor:
                     else:
                         # We have a packet, let's create and react with it
                         packet = packetClass.s_createFromRaw(packetRaw, packetId)
-                        self.__logger.warning("Received interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
+                        self.__logger.info("Received interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
 
                         try:
                             packet.react(self, self.__configuration, self.__securitySystemInterface)
