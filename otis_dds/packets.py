@@ -196,7 +196,7 @@ class _InteractiveReactor:
                             self.__unAckedBacklog[packetId] = unAckedSentPacket
                     
                         else:
-                            self.__logger.debug("Reached retry limit for un-acked sent packet:" + 
+                            self.__logger.warning("Reached retry limit for un-acked sent packet:" + 
                                                 "packet=%s peerTuple=%s retryCount=%s", 
                                                 unAckedSentPacket.packet, 
                                                 unAckedSentPacket.peerTuple, 
@@ -352,7 +352,7 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                 decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, i)
               
                 if self.onlineDecMap[i] == 1:
-                    reactor.logger.info("DEC state was changed to Online, configuring operation mode: decIp=%s mode=%s", 
+                    reactor.logger.info("DEC changed state to Online, configuring operation mode: decIp=%s mode=%s", 
                                         decIp, configuration.decOperationMode)
                  
                     packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
@@ -365,7 +365,7 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                     reactor.sendPacket(packet, decIp, _InteractiveReactor.DenChannelType.Dec)
 
                 else:
-                    reactor.logger.info("DEC state was changed to Offline: decIp=%s", decIp)
+                    reactor.logger.info("DEC changed state to Offline: decIp=%s", decIp)
 
         # Save new online DEC map
         reactor.onlineDecMap = self.onlineDecMap
