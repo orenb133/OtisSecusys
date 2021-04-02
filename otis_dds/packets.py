@@ -416,6 +416,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
         Front = 0
         Rear  = 1
 
+    packetId              : int                                                       # I   (uint32)
     valid                    : bool                                                   # B   (uint8)
     credentialNumber         : bytes                                                  # 16s (16 * uint8)
     mode                     : int                                                    # B   (uint8)
