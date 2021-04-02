@@ -4,6 +4,7 @@ import enum
 import typing
 import dataclasses
 import collections
+import math
 
 #======================================================================================================================
 class _InteractiveReactor:
@@ -471,20 +472,22 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
 class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInteractiveBase):    
     TYPE = 0x40
 
-    packetId          : int   # I   (uint32)
-    decSubnetId       : int   # B   (uint8)
-    decId             : int   # B   (uint8)
-    credentialData    : bytes # Variable sized string
+    packetId                      : int   # I   (uint32)
+    decSubnetId                   : int   # B   (uint8)
+    decId                         : int   # B   (uint8)
+    credentialDataBitsSize        : int   # B   (uint8)
+    credentialDataBytes           : bytes # Variable sized string
 
 #----------------------------------------------------------------------------------------------------------------------
     @classmethod
     def s_createFromRaw(self, rawPacket, packetId):
-        decSubnetId, decId, credentialDataSize = struct.unpack_from('BBB', rawPacket, 6)
-        credentialData = struct.unpack_from('%ss' % (credentialDataSize/8), rawPacket, 9)
+        decSubnetId, decId, credentialDataSizeBits = struct.unpack_from('BBB', rawPacket, 6)
+        credentialDataSizeBytes =  math.ceil(credentialDataSizeBits/8.0)
+        credentialData = struct.unpack_from('%ss' % credentialDataSizeBytes, rawPacket, 9)
 
         return _PacketInteractiveDecSecurityCredentialData(packetId, decSubnetId, decId, credentialData)
 
 #----------------------------------------------------------------------------------------------------------------------
     def packed(self):
-        return struct.pack('IHBBBB%ss' % len(self.credentialData), self.packetId, self.TYPE, self.decSubnetId, self.decId, 
-                        len(self.credentialData), credentialData)
+        return struct.pack('IHBBBB%ss' % len(self.credentialDataBytes), self.packetId, self.TYPE, self.decSubnetId, 
+                          self.decId,  self.credentialDataBitsSize, self.credentialDataBytes)
