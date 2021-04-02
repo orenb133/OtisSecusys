@@ -98,12 +98,12 @@ class Adapter:
         self.__interactiveSocketDes.bind(listenTuple)
 
         # Initializing Interactive DEC socket
-        listenTuple = (configuration.localIp, configuration.interactiveReceivePortDes)
+        listenTuple = (configuration.localIp, configuration.interactiveReceivePortDec)
         self.__logger.info("Initializing interactive DEC socket: tuple=%s", listenTuple)
         self.__interactiveSocketDec = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__interactiveSocketDec.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.__interactiveSocketDec.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
-        self.__interactiveSocketDec.bind((configuration.localIp, configuration.interactiveReceivePortDec))
+        self.__interactiveSocketDec.bind(listenTuple)
 
         # Registering Packets
         self.__registerPacketClass(packets._PacketInteractiveAck)
