@@ -501,7 +501,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
 #----------------------------------------------------------------------------------------------------------------------
     def react(self, reactor, configuration, securitySystemInterface):
 
-        decIp = decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, self.decId)
+        decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, self.decId)
         packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(reactor.sequenceNumber,
                                                 True,
                                                 self.credentialDataBytes,
