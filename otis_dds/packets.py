@@ -402,7 +402,7 @@ class _PacketInteractiveDecSecurityOperationModeV2(typing.NamedTuple, _PacketInt
                         self.packetId, 
                         self.TYPE, 
                         _PacketBase._s_packBitList(self.featuresMap), 
-                        int(self.mode),
+                        self.mode,
                         _PacketBase._s_packBitList(self.allowedFloorsFrontMap), 
                         _PacketBase._s_packBitList(self.allowedFloorsRearMap), 
                         self.reserved)
@@ -488,7 +488,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
     def s_createFromRaw(self, rawPacket, packetId):
         decSubnetId, decId, credentialDataSizeBits = struct.unpack_from('BBB', rawPacket, 6)
         credentialDataSizeBytes =  math.ceil(credentialDataSizeBits/8.0)
-        credentialData = struct.unpack_from('%ss' % credentialDataSizeBytes, rawPacket, 9)
+        credentialData = struct.unpack_from('%ss' % credentialDataSizeBytes, rawPacket, 9)[0]
 
         return _PacketInteractiveDecSecurityCredentialData(packetId, decSubnetId, decId, credentialDataSizeBits, 
                                                            credentialData)
