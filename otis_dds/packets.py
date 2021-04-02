@@ -517,5 +517,5 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
                                                 0,
                                                 bytes([0] * 3))
         
-        reactor.sendPacket(packet, reactor.decIp, _InteractiveReactor.DenChannelType.Dec)
+        reactor.sendPacket(packet, decIp, _InteractiveReactor.DenChannelType.Dec)
 
