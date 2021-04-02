@@ -159,7 +159,8 @@ class _InteractiveReactor:
                     self.__denSocketsByChannel[denChannel].sendto(ackPacket.packed(), peerTuple)
           
             except Exception as e:
-                self.__logger.exception("Failed reacting to interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
+                self.__logger.exception("Failed reacting to interactive packet: packet=%s peerTuple=%s", packetRaw, 
+                                       peerTuple)
 
 #----------------------------------------------------------------------------------------------------------------------
         def _handleUnAckedPackets(self):
@@ -479,7 +480,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
     @classmethod
     def s_createFromRaw(self, rawPacket, packetId):
         decSubnetId, decId, credentialDataSize = struct.unpack_from('BBB', rawPacket, 6)
-        credentialData = struct.unpack_from('%ss' % credentialDataSize, rawPacket, 9)
+        credentialData = struct.unpack_from('%ss' % credentialDataSize/8, rawPacket, 9)
 
         return _PacketInteractiveDecSecurityCredentialData(packetId, decSubnetId, decId, credentialData)
 
