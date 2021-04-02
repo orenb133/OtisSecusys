@@ -480,7 +480,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
     @classmethod
     def s_createFromRaw(self, rawPacket, packetId):
         decSubnetId, decId, credentialDataSize = struct.unpack_from('BBB', rawPacket, 6)
-        credentialData = struct.unpack_from('%ss' % credentialDataSize/8, rawPacket, 9)
+        credentialData = struct.unpack_from('%ss' % (credentialDataSize/8), rawPacket, 9)
 
         return _PacketInteractiveDecSecurityCredentialData(packetId, decSubnetId, decId, credentialData)
 
