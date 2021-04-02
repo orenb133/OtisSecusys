@@ -436,7 +436,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
     def s_createFromRaw(self, rawPacket, packetId):
         (valid, credentialNumber, mode, featuresMap, reserved1, authorizedFloorsFrontMap, authorizedFloorsRearMap, 
         defaultFloor, defaultDoor, dateTime, localTimezone, readerLocation, 
-        reserved2) = struct.unpack_from('B16sB1sB32s32sBbIII3s', rawPacket, 6)
+        reserved2) = struct.unpack_from('B16sB1sB32s32sBbIiI3s', rawPacket, 6)
 
         return _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(packetId, 
                                                             self.TYPE,
@@ -456,7 +456,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
 
 #----------------------------------------------------------------------------------------------------------------------
     def packed(self):
-        self.__cache = struct.pack('IHB16sB1sB32s32sBBIII3s', 
+        self.__cache = struct.pack('IHB16sB1sB32s32sBbIiI3s', 
                         self.packetId, 
                         self.TYPE, 
                         int(self.valid),
