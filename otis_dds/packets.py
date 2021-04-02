@@ -511,7 +511,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
                                                 [0] * 256, # Block all rear doors (TODO)
                                                 10,        # Default floor 10
                                                 _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear,
-                                                time.mktime(time.localtime()),
+                                                int(time.mktime(time.localtime())),
                                                 time.timezone,
                                                 0,
                                                 bytes([0] * 3))
