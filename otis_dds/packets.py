@@ -358,7 +358,7 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                                         decIp, configuration.decOperationMode)
                  
                     packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
-                                                                        [0] * 7, # Not using features (TODO)
+                                                                        [0] * 8, # Not using features (TODO)
                                                                         configuration.decOperationMode, 
                                                                         [0] * 256, # No allowed floors
                                                                         [0] * 256, # No allowed floors (TODO)
@@ -412,6 +412,10 @@ class _PacketInteractiveDecSecurityOperationModeV2(typing.NamedTuple, _PacketInt
 class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _PacketInteractiveBase):    
     TYPE = 0x34
 
+    class DoorType(enum.IntEnum):
+        Front = 0
+        Rear  = 1
+
     valid                    : bool                                                   # B   (uint8)
     credentialNumber         : bytes                                                  # 16s (16 * uint8)
     mode                     : int                                                    # B   (uint8)
@@ -419,10 +423,10 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
     reserved1                : int                                                    # B   (uint8)
     authorizedFloorsFrontMap : list                                                   # 32s (32 * uint8)
     authorizedFloorsRearMap  : list                                                   # 32s (32 * uint8)
-    defaultFloor             : int                                                    # B   (int8)
-    defaultDoor              : int                                                    # B   (uint8)
+    defaultFloor             : int                                                    # b   (int8)
+    defaultDoor              : DoorType                                               # B   (uint8)
     dateTime                 : int                                                    # I   (uint32)
-    localTimezone            : int                                                    # I   (uint32)
+    localTimezone            : int                                                    # i   (int32)
     readerLocation           : int                                                    # I   (uint32)
     reserved2                : bytes                                                  # 3s  (3 * uint8)
 
@@ -431,7 +435,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
     def s_createFromRaw(self, rawPacket, packetId):
         (valid, credentialNumber, mode, featuresMap, reserved1, authorizedFloorsFrontMap, authorizedFloorsRearMap, 
         defaultFloor, defaultDoor, dateTime, localTimezone, readerLocation, 
-        reserved2) = struct.unpack_from('B16sB1sB32s32sBBIII3s', rawPacket, 6)
+        reserved2) = struct.unpack_from('B16sB1sB32s32sBbIII3s', rawPacket, 6)
 
         return _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(packetId, 
                                                             self.TYPE,
@@ -462,7 +466,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
                         _PacketBase._s_packBitList(self.authorizedFloorsFrontMap),
                         _PacketBase._s_packBitList(self.authorizedFloorsRearMap),
                         self.defaultFloor,
-                        self.defaultDoor,
+                        int(self.defaultDoor),
                         self.dateTime,
                         self.localTimezone,
                         self.readerLocation,
@@ -492,3 +496,23 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
     def packed(self):
         return struct.pack('IHBBBB%ss' % len(self.credentialDataBytes), self.packetId, self.TYPE, self.decSubnetId, 
                           self.decId,  self.credentialDataBitsSize, self.credentialDataBytes)
+
+#----------------------------------------------------------------------------------------------------------------------
+    def react(self, reactor, configuration, securitySystemInterface):
+
+        packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(True,
+                                                                      self.credentialDataBytes,
+                                                                      configuration.decOperationMode,
+                                                                      [0] * 8, # Not using features (TODO),
+                                                                      0,
+                                                                      [1] * 256, # Authorise all front doors (TODO)
+                                                                      [0] * 256, # Block all rear doors (TODO)
+                                                                      10,        # Default floor 10
+                                                                      _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear,
+                                                                      time.mktime(time.localtime(),
+                                                                      time.timezone,
+                                                                      0,
+                                                                      0)
+        
+        reactor.sendPacket(packet, reactor.desIp, _InteractiveReactor.DenChannelType.Des)
+
