@@ -436,7 +436,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
     def s_createFromRaw(self, rawPacket, packetId):
         (valid, credentialNumber, mode, featuresMap, reserved1, authorizedFloorsFrontMap, authorizedFloorsRearMap, 
         defaultFloor, defaultDoor, dateTime, localTimezone, readerLocation, 
-        reserved2) = struct.unpack_from('B16sB1sB32s32sBbIiI3s', rawPacket, 6)
+        reserved2) = struct.unpack_from('B16sB1sB32s32sbBIiI3s', rawPacket, 6)
 
         return _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(packetId, 
                                                             self.TYPE,
@@ -446,7 +446,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
                                                             _PacketBase._s_unpackBitList(featuresMap),
                                                             reserved1,
                                                             _PacketBase._s_unpackBitList(authorizedFloorsFrontMap),
-                                                            authorizedFloorsFrontMap(authorizedFloorsRearMap),
+                                                            _PacketBase._s_unpackBitList(authorizedFloorsRearMap),
                                                             defaultFloor,
                                                             defaultDoor,
                                                             dateTime,
@@ -456,22 +456,22 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
 
 #----------------------------------------------------------------------------------------------------------------------
     def packed(self):
-        return          struct.pack('IHB16sB1sB32s32sBbIiI3s', 
-                                    self.packetId, 
-                                    self.TYPE, 
-                                    int(self.valid),
-                                    self.credentialNumber,
-                                    int(self.mode),
-                                    _PacketBase._s_packBitList(self.featuresMap),
-                                    self.reserved1,
-                                    _PacketBase._s_packBitList(self.authorizedFloorsFrontMap),
-                                    _PacketBase._s_packBitList(self.authorizedFloorsRearMap),
-                                    self.defaultFloor,
-                                    int(self.defaultDoor),
-                                    self.dateTime,
-                                    self.localTimezone,
-                                    self.readerLocation,
-                                    self.reserved2)
+        return struct.pack('IHB16sB1sB32s32sbBIiI3s', 
+                            self.packetId, 
+                            self.TYPE, 
+                            int(self.valid),
+                            self.credentialNumber,
+                            self.mode,
+                            _PacketBase._s_packBitList(self.featuresMap),
+                            self.reserved1,
+                            _PacketBase._s_packBitList(self.authorizedFloorsFrontMap),
+                            _PacketBase._s_packBitList(self.authorizedFloorsRearMap),
+                            self.defaultFloor,
+                            int(self.defaultDoor),
+                            self.dateTime,
+                            self.localTimezone,
+                            self.readerLocation,
+                            self.reserved2)
 
 #======================================================================================================================
 class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInteractiveBase):    
