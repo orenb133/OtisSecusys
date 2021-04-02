@@ -416,7 +416,7 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
         Front = 0
         Rear  = 1
 
-    packetId              : int                                                       # I   (uint32)
+    packetId                 : int                                                    # I   (uint32)
     valid                    : bool                                                   # B   (uint8)
     credentialNumber         : bytes                                                  # 16s (16 * uint8)
     mode                     : int                                                    # B   (uint8)
@@ -501,7 +501,8 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
 #----------------------------------------------------------------------------------------------------------------------
     def react(self, reactor, configuration, securitySystemInterface):
 
-        packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(True,
+        packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(reactor.sequenceNumber
+                                                                      True,
                                                                       self.credentialDataBytes,
                                                                       configuration.decOperationMode,
                                                                       [0] * 8, # Not using features (TODO),
