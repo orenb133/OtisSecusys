@@ -456,22 +456,22 @@ class _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(typing.NamedTuple, _P
 
 #----------------------------------------------------------------------------------------------------------------------
     def packed(self):
-        self.__cache = struct.pack('IHB16sB1sB32s32sBbIiI3s', 
-                        self.packetId, 
-                        self.TYPE, 
-                        int(self.valid),
-                        self.credentialNumber,
-                        int(self.mode),
-                        _PacketBase._s_packBitList(self.featuresMap),
-                        self.reserved1,
-                        _PacketBase._s_packBitList(self.authorizedFloorsFrontMap),
-                        _PacketBase._s_packBitList(self.authorizedFloorsRearMap),
-                        self.defaultFloor,
-                        int(self.defaultDoor),
-                        self.dateTime,
-                        self.localTimezone,
-                        self.readerLocation,
-                        self.reserved2)
+        return          struct.pack('IHB16sB1sB32s32sBbIiI3s', 
+                                    self.packetId, 
+                                    self.TYPE, 
+                                    int(self.valid),
+                                    self.credentialNumber,
+                                    int(self.mode),
+                                    _PacketBase._s_packBitList(self.featuresMap),
+                                    self.reserved1,
+                                    _PacketBase._s_packBitList(self.authorizedFloorsFrontMap),
+                                    _PacketBase._s_packBitList(self.authorizedFloorsRearMap),
+                                    self.defaultFloor,
+                                    int(self.defaultDoor),
+                                    self.dateTime,
+                                    self.localTimezone,
+                                    self.readerLocation,
+                                    self.reserved2)
 
 #======================================================================================================================
 class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInteractiveBase):    
@@ -502,19 +502,19 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
     def react(self, reactor, configuration, securitySystemInterface):
 
         packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(reactor.sequenceNumber,
-                                                                      True,
-                                                                      self.credentialDataBytes,
-                                                                      configuration.decOperationMode,
-                                                                      [0] * 8, # Not using features (TODO),
-                                                                      0,
-                                                                      [1] * 256, # Authorise all front doors (TODO)
-                                                                      [0] * 256, # Block all rear doors (TODO)
-                                                                      10,        # Default floor 10
-                                                                      _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear,
-                                                                      time.mktime(time.localtime()),
-                                                                      time.timezone,
-                                                                      0,
-                                                                      0)
+                                                True,
+                                                self.credentialDataBytes,
+                                                configuration.decOperationMode,
+                                                [0] * 8, # Not using features (TODO),
+                                                0,
+                                                [1] * 256, # Authorise all front doors (TODO)
+                                                [0] * 256, # Block all rear doors (TODO)
+                                                10,        # Default floor 10
+                                                _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear,
+                                                time.mktime(time.localtime()),
+                                                time.timezone,
+                                                0,
+                                                bytes([0] * 3))
         
         reactor.sendPacket(packet, reactor.desIp, _InteractiveReactor.DenChannelType.Des)
 
