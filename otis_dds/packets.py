@@ -485,7 +485,8 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
         credentialDataSizeBytes =  math.ceil(credentialDataSizeBits/8.0)
         credentialData = struct.unpack_from('%ss' % credentialDataSizeBytes, rawPacket, 9)
 
-        return _PacketInteractiveDecSecurityCredentialData(packetId, decSubnetId, decId, credentialData)
+        return _PacketInteractiveDecSecurityCredentialData(packetId, decSubnetId, decId, credentialDataSizeBits, 
+                                                           credentialData)
 
 #----------------------------------------------------------------------------------------------------------------------
     def packed(self):
