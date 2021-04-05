@@ -19,30 +19,37 @@ class SecusysClient:
         head  : object
         body  : object
 
-    def __init__(self, userName, password, wsdl):
-        self._userName = userName
-        self._password = password
-        self._wsdl = wsdl
-        self._client = None
+    def __init__(self, logger, userName, password, wsdl):
+        self.__userName = userName
+        self.__password = password
+        self.__wsdl = wsdl
+        self.__logger = logge
+        self.__client = None
 
     def connect(self):
-        self._client = zeep.Client(self._wsdl)
+        self.__logger.info("Connecting to Secusys API: wsdl=%s", self.__wsdl)
+        self.__client = zeep.Client(self.__wsdl)
 
     def disconnect(self):
-        self._client = None
+        self.__logger.info("Disconnecting from Secusys API")
+        self.__client = None
 
     def getPersonnalIdByCardNo(self, cardNo):
-        validCode = self._createValidCode()
+        validCode = self.__createValidCode()
         res = None
 
         try:
-            rawResponse = self._client.service.GetCardInfos(AppKey = self._userName, 
+            self.__logger.debug("Requesting info for card: cardNo=%s", cardNo)
+
+            rawResponse = self.__client.service.GetCardInfos(AppKey = self.__userName, 
                                                              TimeStamp = validCode.timeStamp, 
                                                              PersonnalID = 0,
                                                              CardNo = cardNo, 
                                                              ValidCode = validCode.md5Hash)
 
-            response = self._parseResponse('GetCardInfos', rawResponse)
+            response = self.__parseResponse('GetCardInfos', rawResponse)
+
+            self.__logger.debug("Received response for card: cardNo=%s response=%s", cardNo, response)
 
             if response.head.errorCode == 0:
                 items = response.body['Item']
@@ -51,25 +58,21 @@ class SecusysClient:
                     # Not a list and has a value otherwise we would have received an error from the server
                     res = int(items['PersonnalID'])
                 else:
-                    # Ambiguity, expecting a single personnal ID
-                    print ("Ambiguity")
-                    print (items)
-                    #TODO Log
+                    self.__logger.error("Ambiguity, expecting a single personnal ID: cardNo=%s response=%s", cardNo, response)
+
             else:
-                print (response.head)
-                #TODO Log
+                self.__logger.error("Received an error from API: cardNo=%s response=%s", cardNo, response)
         except:
-            #TODO: Log
-            raise
+            self.__logger.exception("Failed requesting info for card: cardNo=%s", cardNo)
 
         return res
 
-    def _createValidCode(self):
+    def __createValidCode(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
-        return _SecusysClientValidCode(timestamp, hashlib.md5((timestamp+self._password).encode('utf-8')).hexdigest())
+        return _SecusysClientValidCode(timestamp, hashlib.md5((timestamp+self.__password).encode('utf-8')).hexdigest())
 
-    def _parseResponse(self, methodName, rawResponse):
+    def __parseResponse(self, methodName, rawResponse):
         res = None
 
         try:
@@ -79,7 +82,7 @@ class SecusysClient:
             res = _SecusysClientParsedResponse(_SecusysClientParsedResponseHead(int(head['ErrCode']), head['ErrMsg']), body)
 
         except:
-            #TODO Log
+            self.__logger.exception("Failed to parse response")
             res = None
             raise
 

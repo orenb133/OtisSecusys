@@ -26,7 +26,7 @@ config.heartbeatSendInterval = 1
 config.decOperationMode = 3
 
 # Logger
-logger = logging.getLogger('DDS DdsCommunicator')
+logger = logging.getLogger('Test Logger')
 logger.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -39,6 +39,10 @@ logger.addHandler(ch)
 
 # Security system integration
 class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySystemAdapterInterface):
+
+    def __init__(self, logger, secusysClient):
+        self.__logger = logger
+        self.__secusysClient = secusysClient
 
     @property
     def allowedFloorsFront(self):
@@ -56,8 +60,8 @@ class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySyst
             [12,13], 
             [14,15])
 
-secusysAdapter = SecuritySystemAdapterSecusys()
-
-
+secusysClient = secusys_acl.client.SecusysClient(logger, 'administrator', 'secusys', 'http://10.0.0.88:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
+secusysClient.connect()
+secusysAdapter = SecuritySystemAdapterSecusys(logger, secusysClient)
 ssDdsCommunicator = otis_dds.communicator.DdsCommunicator(logger, config, secusysAdapter)
 ssDdsCommunicator.start()
