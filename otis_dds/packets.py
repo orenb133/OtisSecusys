@@ -539,8 +539,8 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
                                                 configuration.decOperationMode,
                                                 [0] * 8, # Not using features 
                                                 0,
-                                                _PacketBase._s_floorListToBitList(accessInfo.allowedFloorsFront)
-                                                _PacketBase._s_floorListToBitList(accessInfo.allowedFloorsRear)
+                                                _PacketBase._s_floorListToBitList(accessInfo.allowedFloorsFront),
+                                                _PacketBase._s_floorListToBitList(accessInfo.allowedFloorsRear),
                                                 accessInfo.defaultFloor,
                                                 defaultDoorType,
                                                 int(time.mktime(time.localtime())),
