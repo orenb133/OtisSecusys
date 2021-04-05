@@ -52,7 +52,7 @@ class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySyst
         return otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(
             True, 
             0, 
-            otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfoAccessInfo.DoorType.Front, 
+            otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Front, 
             [12,13], 
             [14,15])
 
