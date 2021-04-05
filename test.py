@@ -49,7 +49,7 @@ class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySyst
         return [-2,11]
 
     def getAccessInfo(self,credentialData, credentialSizeBits):
-        return AccessInfo(True, 0, AccessInfo.DoorType.Front, [12,13], [14,15])
+        return otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(True, 0, AccessInfo.DoorType.Front, [12,13], [14,15])
 
 secusysAdapter = SecuritySystemAdapterSecusys()
 
