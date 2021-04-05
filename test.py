@@ -1,6 +1,7 @@
 import otis_dds.communicator
 import otis_dds.security_system_adapter
 import secusys_acl.client
+import logging
 
 # Config
 config = otis_dds.communicator.DdsCommunicator.Configuration()
