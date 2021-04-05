@@ -52,14 +52,14 @@ class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySyst
         allowedFloorsRear: []
 
     @property
-    def allowedFloorsFront:
+    def allowedFloorsFront(self):
         return [-3,10]
 
     @property
-    def allowedFloorsRear:
+    def allowedFloorsRear(self):
         return [-2,11]
 
-    def getAccessInfo(credentialData, credentialSizeBits):
+    def getAccessInfo(self,credentialData, credentialSizeBits):
         return AccessInfo(True, 0, AccessInfo.DoorType.Front, [12,13], [14,15])
 
 secusysAdapter = SecuritySystemAdapterSecusys()
