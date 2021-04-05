@@ -39,18 +39,6 @@ logger.addHandler(ch)
 # Security system integration
 class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySystemAdapterInterface):
 
-    class AccessInfo(typing.NamedTuple):
-       
-        class DoorType(enum.IntEnum):
-            Front = 0
-            Rear = 1
-     
-        isValid : bool
-        defaultFloor : int
-        defaultDoorType : DoorType
-        allowedFloorsFront: []
-        allowedFloorsRear: []
-
     @property
     def allowedFloorsFront(self):
         return [-3,10]

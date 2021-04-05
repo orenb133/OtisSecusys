@@ -13,8 +13,8 @@ class SecuritySystemAdapterInterface:
         isValid : bool
         defaultFloor : int
         defaultDoorType : DoorType
-        allowedFloorsFront: []
-        allowedFloorsRear: []
+        allowedFloorsFront: list
+        allowedFloorsRear: list
 
     @property
     def allowedFloorsFront(self):
