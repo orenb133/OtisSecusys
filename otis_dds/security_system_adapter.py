@@ -17,14 +17,14 @@ class SecuritySystemAdapterInterface:
         allowedFloorsRear: []
 
     @property
-    def allowedFloorsFront:
+    def allowedFloorsFront(self):
         raise NotImplementedError # Returns a list of floors
 
     @property
-    def allowedFloorsRear:
+    def allowedFloorsRear(self):
         raise NotImplementedError # Return a list of floors
 
-    def getAccessInfo(credentialData, credentialSizeBits):
+    def getAccessInfo(self, credentialData, credentialSizeBits):
         raise NotImplementedError # Return a list of floors
 
     
