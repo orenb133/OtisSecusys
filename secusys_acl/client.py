@@ -5,6 +5,7 @@ import collections
 import hashlib
 import typing
 
+#======================================================================================================================
 class SecusysClient:
 
     class _SecusysClientValidCode(typing.NamedTuple):
@@ -12,7 +13,7 @@ class SecusysClient:
         md5Hash     : int
 
     class _SecusysClientParsedResponseHead(typing.NamedTuple):
-        errorCode : int
+        errorCode    : int
         errorMessage : str
 
     class _SecusysClientParsedResponse(typing.NamedTuple):
@@ -20,6 +21,13 @@ class SecusysClient:
         body  : object
 
     def __init__(self, logger, userName, password, wsdl):
+        """ C'tor
+        Params:
+            logger: Python logging interface
+            userName: Secusys user name
+            password: Secusys password
+            wsdl: URL for Secusys WSDL
+        """
         self.__userName = userName
         self.__password = password
         self.__wsdl = wsdl
@@ -27,10 +35,14 @@ class SecusysClient:
         self.__client = None
 
     def connect(self):
+        """ Connect to Secusys API
+        """
         self.__logger.info("Connecting to Secusys API: wsdl=%s", self.__wsdl)
         self.__client = zeep.Client(self.__wsdl)
 
     def disconnect(self):
+        """ Disconnect from Secusys API
+        """
         self.__logger.info("Disconnecting from Secusys API")
         self.__client = None
 
@@ -70,7 +82,7 @@ class SecusysClient:
     def __createValidCode(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
-        return _SecusysClientValidCode(timestamp, hashlib.md5((timestamp+self.__password).encode('utf-8')).hexdigest())
+        return self._SecusysClientValidCode(timestamp, hashlib.md5((timestamp+self.__password).encode('utf-8')).hexdigest())
 
     def __parseResponse(self, methodName, rawResponse):
         res = None
@@ -79,7 +91,7 @@ class SecusysClient:
             response = xmltodict.parse(rawResponse)
             head = response['Integration'][methodName]['Head']
             body = response['Integration'][methodName]['Body']
-            res = _SecusysClientParsedResponse(_SecusysClientParsedResponseHead(int(head['ErrCode']), head['ErrMsg']), body)
+            res = self._SecusysClientParsedResponse(self._SecusysClientParsedResponseHead(int(head['ErrCode']), head['ErrMsg']), body)
 
         except:
             self.__logger.exception("Failed to parse response")
@@ -87,11 +99,3 @@ class SecusysClient:
             raise
 
         return res
-
-if __name__ == "__main__":
-    # Some testing around
-    secureSysClient = SecusysClient('administrator', 'secusys', 'http://10.0.0.88:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
-    secureSysClient.connect()
-    print (secureSysClient.getPersonnalIdByCardNo("000012"))
-    print (secureSysClient.getPersonnalIdByCardNo("00001234"))
-    secureSysClient.disconnect()
