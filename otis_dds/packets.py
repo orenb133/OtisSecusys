@@ -274,7 +274,7 @@ class _PacketBase(object):
             if floorNumber >= 0:
                 bitList[floorNumber] = 1
             else:
-                bitList[256 + i] = 1
+                bitList[256 + floorNumber] = 1
 
         return bitList
 
