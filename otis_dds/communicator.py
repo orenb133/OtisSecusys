@@ -10,9 +10,8 @@ import functools
 import dataclasses
 import logging
 
-
 #======================================================================================================================
-class Adapter:
+class DdsCommunicator:
 
     ICD_MAJOR = 0x3
     ICD_MINOR = 0x0
@@ -52,7 +51,7 @@ class Adapter:
         """ C'tor
         Params:
             logger: Python logging interface
-            configuration: Adapter configuration
+            configuration: DdsCommunicator configuration
             securitySystemInterface: Interface for the security system
         """
 
@@ -116,10 +115,10 @@ class Adapter:
 #-----------------------------------------------------------------------------------------------------------------------  
     def start(self):
         """
-        Start the Adapter
+        Start the DdsCommunicator
         """
         if not self.__shouldRun:
-            self.__logger.info("Starting security system adapter!")
+            self.__logger.info("Starting DDS communicator!")
             self.__shouldRun = True
 
             while self.__shouldRun:
@@ -131,10 +130,10 @@ class Adapter:
 #-----------------------------------------------------------------------------------------------------------------------  
     def stop(self):
         """
-        Stop the Adapter
+        Stop the DdsCommunicator
         """
         if self.__shouldRun:
-            self.__logger.info("Stopping ecurity system adapter!")
+            self.__logger.info("Stopping DDS communicator!")
             self.__shouldRun = False
 #-----------------------------------------------------------------------------------------------------------------------        
     def __registerPacketClass(self, packetClass):
@@ -250,40 +249,4 @@ class Adapter:
             except Exception as e:
                 self.__logger.exception("Failed updating DESs state")
 
-
-config = Adapter.Configuration()
-config.heartbeatReceiveMcGroup = '234.46.30.7'
-config.heartbeatReceivePort = 47307
-config.heartbeatReceiveTimeout = 3.0
-
-config.localIp = '192.168.1.50'
-
-config.interactiveReceivePortDes = 45303
-config.interactiveReceivePortDec = 46308
-config.interactiveSendPortDes = 46303
-config.interactiveSendPortDec = 45308
-config.interactiveDuplicatesCacheSize = 5
-config.interactiveSendRetryIntreval = 1.0
-config.interactiveSendMaxRetries = 5
-
-config.heartbeatSendMcGroup = '234.46.30.7'
-config.heartbeatSendPort = 48307
-config.heartbeatSendInterval = 1
-
-config.decOperationMode = 1
-
-
-logger = logging.getLogger('Adapter')
-logger.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(ch)
-
-ssAdapter = Adapter(logger, config, None)
-ssAdapter.start()
 

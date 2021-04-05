@@ -5,6 +5,7 @@ import typing
 import dataclasses
 import collections
 import math
+import security_system_adapter
 
 #======================================================================================================================
 class _InteractiveReactor:
@@ -20,10 +21,10 @@ class _InteractiveReactor:
             peerTuple     : ()
             lastSendTime  : int
             denChannel    : int
-            retryCount     : int = 0
+            retryCount    : int = 0
 
 #----------------------------------------------------------------------------------------------------------------------
-        def __init__(self, logger, desIp, configuration, desSocket, decSocket, packetClasses, securitySystemInterface):
+        def __init__(self, logger, desIp, configuration, desSocket, decSocket, packetClasses, securitySystemAdapter):
             self.__logger = logger
             self.__desIp = desIp
             self.__lastHeartbeatTime = 0
@@ -45,7 +46,7 @@ class _InteractiveReactor:
             self.__denChannelByPeerPort = {self.__configuration.interactiveReceivePortDes : self.DenChannelType.Des,
                                            self.__configuration.interactiveReceivePortDec : self.DenChannelType.Dec}
             self.__packetClasses = packetClasses
-            self.__securitySystemInterface = securitySystemInterface
+            self.__securitySystemAdapter = securitySystemAdapter
 
 #----------------------------------------------------------------------------------------------------------------------
         @property
@@ -146,7 +147,7 @@ class _InteractiveReactor:
                         self.__logger.debug("Received interactive packet: packet=%s peerTuple=%s", packet, peerTuple)
 
                         try:
-                            packet.react(self, self.__configuration, self.__securitySystemInterface)
+                            packet.react(self, self.__configuration, self.__securitySystemAdapter)
                             ackType = _PacketInteractiveAck.AckType.Acceptable
 
                         except Exception as e:
@@ -198,11 +199,15 @@ class _InteractiveReactor:
                             self.__unAckedBacklog[packetId] = unAckedSentPacket
                     
                         else:
-                            self.__logger.warning("Reached retry limit for un-acked sent packet:" + 
-                                                "packet=%s peerTuple=%s retryCount=%s", 
-                                                unAckedSentPacket.packet, 
+                            self.__logger.info("Reached retry limit for un-acked sent packet:" + 
+                                                "packetId=%s peerTuple=%s retryCount=%s", 
+                                                unAckedSentPacket.packet[0], 
                                                 unAckedSentPacket.peerTuple, 
                                                 unAckedSentPacket.retryCount)
+                           
+                            self.__logger.debug("Reached retry limit for un-acked sent packet:" + 
+                                                "unackedSentPacket=%s", 
+                                                unAckedSentPacket.packet)
                     else:
                         # Pusing back to front and breaking as items are sorted by time within the backlog
                         self.__unAckedBacklog[packetId] = unAckedSentPacket
@@ -254,6 +259,24 @@ class _PacketBase(object):
         """
         return bytes([int("".join(map(str, reversed(bitList[i:i+8]))), 2) for i in range(0, len(bitList), 8)])
 
+    def _s_floorListToBitList(floorList):
+        """ Convert a list of numerical floors to a location on a bit list
+        Params:
+            floorList: List of floors between -127 to 127
+        Returns:
+            List of 0s and 1s where positive floors are at locations 0 to 127 and negative are at 129-255
+        """
+       
+        bitList = [0] * 256
+
+        for floorNumber in floorList:
+            if floorNumber >= 0:
+                bitList[floorNumber] = 1
+            else:
+                bitList[256 + i] = 1
+
+        return bitList
+
 
 #======================================================================================================================
 class _PacketHeartbeat(typing.NamedTuple, _PacketBase):    
@@ -286,12 +309,12 @@ class _PacketHeartbeat(typing.NamedTuple, _PacketBase):
 class _PacketInteractiveBase(_PacketBase):
 
 #----------------------------------------------------------------------------------------------------------------------
-    def react(self, reactor, configuration, securitySystemInterface):
+    def react(self, reactor, configuration, securitySystemAdapter):
         """ React upon receiving this packet
         Params:
             Reactor - Interactive packet reactor handling packets from
             configuration - System configuration structure
-            securitySystemInterface - Security system interface for interacting with security system
+            securitySystemAdapter - Security system interface for interacting with security system
         Returns: 
             True iff reaction was succesfull 
         """
@@ -322,7 +345,7 @@ class _PacketInteractiveAck(typing.NamedTuple, _PacketInteractiveBase):
         return struct.pack('IHI', self.packetId, self.TYPE, int(self.ackType))
 
 #----------------------------------------------------------------------------------------------------------------------
-    def react(self, reactor, configuration, securitySystemInterface):
+    def react(self, reactor, configuration, securitySystemAdapter):
         reactor._ackPacket(self.packetId)
 
 #======================================================================================================================
@@ -345,7 +368,9 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
         return struct.pack('IHB32s', self.packetId, self.TYPE, self.decSubnetId, _PacketBase._s_packBitList(self.onlineDecMap))
 
 #----------------------------------------------------------------------------------------------------------------------
-    def react(self, reactor, configuration, securitySystemInterface):
+    def react(self, reactor, configuration, securitySystemAdapter):
+        allowedFloorsFront = _PacketBase._s_floorListToBitList(securitySystemAdapter.allowedFloorsFront)
+        allowedFloorsRear = _PacketBase._s_floorListToBitList(securitySystemAdapter.allowedFloorsRear)
 
         for i in range(len(self.onlineDecMap)):
          
@@ -358,10 +383,10 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                                         decIp, configuration.decOperationMode)
                  
                     packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
-                                                                        [0] * 8, # Not using features (TODO)
+                                                                        [0] * 8 # Not using features
                                                                         configuration.decOperationMode, 
-                                                                        [0] * 256, # No allowed floors
-                                                                        [0] * 256, # No allowed floors (TODO)
+                                                                        allowedFloorsFront,
+                                                                        allowedFloorsRear,
                                                                         0)
 
                     reactor.sendPacket(packet, decIp, _InteractiveReactor.DenChannelType.Dec)
@@ -499,19 +524,24 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
                           self.decId,  self.credentialDataBitsSize, self.credentialDataBytes)
 
 #----------------------------------------------------------------------------------------------------------------------
-    def react(self, reactor, configuration, securitySystemInterface):
+    def react(self, reactor, configuration, securitySystemAdapter):
+        accessInfo = securitySystemAdapter.getAccessInfo(credentialData, credentialSizeBits)
+        defaultDoorType = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Front
+
+        if accessInfo.defaultDoorType == security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Rear:
+            defaultDoorType = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear
 
         decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, self.decId)
         packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(reactor.sequenceNumber,
-                                                True,
+                                                accessInfo.isValid,
                                                 self.credentialDataBytes,
                                                 configuration.decOperationMode,
-                                                [0] * 8, # Not using features (TODO),
+                                                [0] * 8, # Not using features 
                                                 0,
-                                                [1] * 256, # Authorise all front doors (TODO)
-                                                [0] * 256, # Block all rear doors (TODO)
-                                                10,        # Default floor 10
-                                                _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear,
+                                                _PacketBase._s_floorListToBitList(accessInfo.allowedFloorsFront)
+                                                _PacketBase._s_floorListToBitList(accessInfo.allowedFloorsRear)
+                                                accessInfo.defaultFloor,
+                                                defaultDoorType,
                                                 int(time.mktime(time.localtime())),
                                                 time.timezone,
                                                 0,

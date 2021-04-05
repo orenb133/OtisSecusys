@@ -3,12 +3,21 @@ import zeep
 import xmltodict
 import collections
 import hashlib
+import typing
 
-_SecusysConnectorValidCode = collections.namedtuple('SecusysConnectorValidCode', 'timeStamp md5Hash')
-_SecusysConnectorParsedResponse = collections.namedtuple('SecusysConnectorParsedResponse', 'head body')
-_SecusysConnectorParsedResponseHead = collections.namedtuple('SecusysConnectorPaesedResponse', 'errorCode errorMessage')
+class SecusysClient:
 
-class SecusysConnector:
+    class _SecusysClientValidCode(typing.NamedTuple):
+        timeStamp   : int
+        md5Hash     : int
+
+    class _SecusysClientParsedResponseHead(typing.NamedTuple):
+        errorCode : int
+        errorMessage : str
+
+    class _SecusysClientParsedResponse(typing.NamedTuple):
+        head  : object
+        body  : object
 
     def __init__(self, userName, password, wsdl):
         self._userName = userName
@@ -58,7 +67,7 @@ class SecusysConnector:
     def _createValidCode(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
-        return _SecusysConnectorValidCode(timestamp, hashlib.md5((timestamp+self._password).encode('utf-8')).hexdigest())
+        return _SecusysClientValidCode(timestamp, hashlib.md5((timestamp+self._password).encode('utf-8')).hexdigest())
 
     def _parseResponse(self, methodName, rawResponse):
         res = None
@@ -67,7 +76,7 @@ class SecusysConnector:
             response = xmltodict.parse(rawResponse)
             head = response['Integration'][methodName]['Head']
             body = response['Integration'][methodName]['Body']
-            res = _SecusysConnectorParsedResponse(_SecusysConnectorParsedResponseHead(int(head['ErrCode']), head['ErrMsg']), body)
+            res = _SecusysClientParsedResponse(_SecusysClientParsedResponseHead(int(head['ErrCode']), head['ErrMsg']), body)
 
         except:
             #TODO Log
@@ -78,8 +87,8 @@ class SecusysConnector:
 
 if __name__ == "__main__":
     # Some testing around
-    secureSysConnector = SecusysConnector('administrator', 'secusys', 'http://10.0.0.88:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
-    secureSysConnector.connect()
-    print (secureSysConnector.getPersonnalIdByCardNo("000012"))
-    print (secureSysConnector.getPersonnalIdByCardNo("00001234"))
-    secureSysConnector.disconnect()
+    secureSysClient = SecusysClient('administrator', 'secusys', 'http://10.0.0.88:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
+    secureSysClient.connect()
+    print (secureSysClient.getPersonnalIdByCardNo("000012"))
+    print (secureSysClient.getPersonnalIdByCardNo("00001234"))
+    secureSysClient.disconnect()
