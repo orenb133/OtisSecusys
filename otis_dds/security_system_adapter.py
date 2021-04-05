@@ -26,11 +26,14 @@ class SecuritySystemAdapterInterface:
     def allowedFloorsRear(self):
         """ List of allowed floors from the rear door
         """
-
+        raise NotImplementedError 
+        
     def getAccessInfo(self, credentialData, credentialSizeBits):
         """ Get access info for given credentials data
         Params:
-            credentialData: 
+            credentialData: Credential data buffer
+            credentialSizeBits Credential data size in bits
+        """"
         raise NotImplementedError # Return a list of floors
 
     
