@@ -54,5 +54,5 @@ class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySyst
 secusysAdapter = SecuritySystemAdapterSecusys()
 
 
-ssDdsCommunicator = DdsCommunicator(logger, config, secusysAdapter)
+ssDdsCommunicator = otis_dds.communicator.DdsCommunicator(logger, config, secusysAdapter)
 ssDdsCommunicator.start()
