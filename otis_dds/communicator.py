@@ -1,4 +1,3 @@
-import packets
 import socket
 import struct
 import sys
@@ -9,6 +8,8 @@ import typing
 import functools
 import dataclasses
 import logging
+
+from . import packets
 
 #======================================================================================================================
 class DdsCommunicator:

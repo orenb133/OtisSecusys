@@ -5,7 +5,8 @@ import typing
 import dataclasses
 import collections
 import math
-import security_system_adapter
+
+from . import security_system_adapter
 
 #======================================================================================================================
 class _InteractiveReactor:
@@ -383,7 +384,7 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                                         decIp, configuration.decOperationMode)
                  
                     packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
-                                                                        [0] * 8 # Not using features
+                                                                        [0] * 8, # Not using features
                                                                         configuration.decOperationMode, 
                                                                         allowedFloorsFront,
                                                                         allowedFloorsRear,
