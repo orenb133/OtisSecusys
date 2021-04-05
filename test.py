@@ -60,7 +60,7 @@ class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySyst
             [12,13], 
             [14,15])
 
-secusysClient = secusys_acl.client.SecusysClient(logger, 'administrator', 'secusys', 'http://10.0.0.88:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
+secusysClient = secusys_acl.client.SecusysClient(logger, 'administrator', 'secusys', 'http://192.168.201.3:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
 secusysClient.connect()
 secusysAdapter = SecuritySystemAdapterSecusys(logger, secusysClient)
 ssDdsCommunicator = otis_dds.communicator.DdsCommunicator(logger, config, secusysAdapter)
