@@ -526,7 +526,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
 
 #----------------------------------------------------------------------------------------------------------------------
     def react(self, reactor, configuration, securitySystemAdapter):
-        accessInfo = securitySystemAdapter.getAccessInfo(credentialData, credentialSizeBits)
+        accessInfo = securitySystemAdapter.getAccessInfo(self.credentialDataBytes, self.credentialDataBitsSize)
         defaultDoorType = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Front
 
         if accessInfo.defaultDoorType == security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Rear:
