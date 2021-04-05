@@ -23,7 +23,7 @@ class SecusysClient:
         self.__userName = userName
         self.__password = password
         self.__wsdl = wsdl
-        self.__logger = logge
+        self.__logger = logger
         self.__client = None
 
     def connect(self):
