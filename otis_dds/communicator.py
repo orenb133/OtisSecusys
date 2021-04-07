@@ -124,7 +124,7 @@ class DdsCommunicator:
             self.__shouldRun = True
 
             try:
-                self.__daemon = threading.Thread(target = self.__mainLoop(), daemon = True)
+                self.__daemon = threading.Thread(target = self.__mainLoop, daemon = True)
                 self.__daemon.start()
 
             except Exception as e:
