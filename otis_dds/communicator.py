@@ -8,6 +8,7 @@ import typing
 import functools
 import dataclasses
 import logging
+import threading
 
 from . import packets
 
@@ -48,18 +49,19 @@ class DdsCommunicator:
         decOperationMode                 : int = 0      
 
 #-----------------------------------------------------------------------------------------------------------------------
-    def __init__(self, logger, configuration, securitySystemInterface):
+    def __init__(self, logger, configuration, securitySystemAdapter):
         """ C'tor
         Params:
             logger: Python logging interface
             configuration: DdsCommunicator configuration
-            securitySystemInterface: Interface for the security system
+            securitySystemAdapter: Adapter twards the security system
         """
 
         self.__shouldRun = False
+        self.__daemon = None
         self.__logger = logger
         self.__configuration = configuration
-        self.__securitySystemInterface = securitySystemInterface
+        self.__securitySystemAdapter = securitySystemAdapter
 
         self.__interactivePacketClasses = {}
         self.__interactivePacketsRectors = {}
@@ -115,27 +117,49 @@ class DdsCommunicator:
 
 #-----------------------------------------------------------------------------------------------------------------------  
     def start(self):
+        """ Start the DdsCommunicator
         """
-        Start the DdsCommunicator
-        """
-        if not self.__shouldRun:
+        if not self.__shouldRun and self.__daemon is None:
             self.__logger.info("Starting DDS communicator!")
             self.__shouldRun = True
 
-            while self.__shouldRun:
-                self.__handleHeartbeatSend()
-                self.__handleHeartbeatReceive()
-                self.__handleInteractive(self.__interactiveSocketDes)
-                self.__handleInteractive(self.__interactiveSocketDec)
+            try:
+                self.__daemon = threading.Thread(target = self.__mainLoop(), daemon = True)
+                self.__daemon.start()
+
+            except Exception as e:
+                self.__logger.exception("Failed spawning daemon thread")
+                self.__shouldRun = False
+                self.__daemon = None
+                raise
+        
+        else:
+            self.__logger.warning("DDS communicator is already started")
 
 #-----------------------------------------------------------------------------------------------------------------------  
     def stop(self):
-        """
-        Stop the DdsCommunicator
+        """ Stop the DdsCommunicator
         """
         if self.__shouldRun:
             self.__logger.info("Stopping DDS communicator!")
             self.__shouldRun = False
+            self.__daemon.join()
+            self.__daemon = None
+
+        else:
+           self.__logger.warning("DDS communicator is already stopped") 
+
+ #-----------------------------------------------------------------------------------------------------------------------        
+    def __mainLoop(self):
+        self.__logger.debug("Starting main-loop")
+
+        while self.__shouldRun:
+            self.__handleHeartbeatSend()
+            self.__handleHeartbeatReceive()
+            self.__handleInteractive(self.__interactiveSocketDes)
+            self.__handleInteractive(self.__interactiveSocketDec)
+
+
 #-----------------------------------------------------------------------------------------------------------------------        
     def __registerPacketClass(self, packetClass):
         self.__logger.info("Registering packet: packetClass=%s", packetClass)
@@ -223,7 +247,7 @@ class DdsCommunicator:
                                                                             self.__interactiveSocketDes, 
                                                                             self.__interactiveSocketDec, 
                                                                             self.__interactivePacketClasses,
-                                                                            self.__securitySystemInterface)
+                                                                            self.__securitySystemAdapter)
 
                     self.__interactivePacketsRectors[reactorKey] = interactivePacketsReactor
 

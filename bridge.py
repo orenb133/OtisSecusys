@@ -1,8 +1,9 @@
 import otis_dds.communicator
 import otis_dds.security_system_adapter
-import secusys_acs.client
+import secusys_acs.client 
 import logging
 import configparser
+import ipaddress
 
 #======================================================================================================================
 class Bridge:
@@ -11,98 +12,249 @@ class Bridge:
     __CONFIG_SECTION_ACS = 'ACS'
 
 #-----------------------------------------------------------------------------------------------------------------------
+    class _SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySystemAdapterInterface):
+
+        __CONFIG_SECTION_ALLOWED = 'ALLOWED'
+        __CONFIG_KEY_FLOORS = 'floors'
+
+        def __init__(self, logger, secusysClient, groupsFilePath):
+            """ C'tor
+            Params:
+                logger: Python logging interface
+                secusysClient: Secusys client to addapt to
+                groupsFilePath: Groups mapping file path
+            """
+
+            self.__logger = logger
+            self.__secusysClient = secusysClient
+            self.__groups = {}
+            
+            configParser = configparser.ConfigParser()
+
+            try:
+                configParser.read(groupsFilePath)
+
+                # Get allowed floors and remove this section
+                allowedPath = (self.__CONFIG_SECTION_ALLOWED, self.__CONFIG_KEY_FLOORS)
+                self.__allowedFloors = self.__parseFloorList(configParser.get(*allowedPath), "%s.%s" % allowedPath)
+                configParser.remove_section(self.__CONFIG_SECTION_ALLOWED)
+
+                # Get the rest of the groups
+                for section in configParser.sections():
+                    for key, val in configParser.items(section):
+                        if key == self.__CONFIG_KEY_FLOORS:
+                            floorsList = self.__parseFloorList(val, "%s.%s" % (section, key))
+
+                            # Verify there is no overlap between allowed and other groups floors
+                            for i in self.__allowedFloors:
+                             
+                                if i in floorsList:
+                                    raise ValueError("%s.%s list must not overlap with %s.%s. Found %s" % 
+                                                     (section, key, *allowedPath, i))
+                           
+                                else:
+                                    self.__groups[section] = floorsList
+
+            except Exception as e:
+                self.__logger.exception("Failed parsing groups file: groupsFilePath=%s", groupsFilePath)
+                raise
+           
+#----------------------------------------------------------------------------------------------------------------------- 
+        @property
+        def allowedFloorsFront(self):
+            return self.__allowedFloors
+
+#----------------------------------------------------------------------------------------------------------------------- 
+        @property
+        def allowedFloorsRear(self):
+            # Note we don't support rear 
+            return []
+
+#----------------------------------------------------------------------------------------------------------------------- 
+        def getAccessInfo(self,credentialData, credentialSizeBits):
+            return otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(
+                True, 
+                0, 
+                otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Front, 
+                [12,13], 
+                [14,15])
+
+#-----------------------------------------------------------------------------------------------------------------------  
+        def __parseFloorList(self, rawFloorList, fieldName):
+            res = []
+           
+            if rawFloorList:
+
+                for item in rawFloorList.replace(' ','').split(','):
+                    
+                    if ':' in item:
+                        splitRange = [int(x) for x in item.split(':')]
+
+                        if len(splitRange) == 2:
+                            res.extend(range(splitRange[0], splitRange[1]+1))
+                    
+                        else:
+                            raise ValueError("%s ranges must be in a form of Start:End. Got '%s'" % (fieldName, item))
+                    
+                    else:
+                        res.append(int(item))
+
+            for i in res:
+                if i < self.FLOOR_NUMBER_MIN or i > self.FLOOR_NUMBER_MAX:
+                  raise ValueError("%s numbers must be between %s to %s. Got '%s'" % 
+                                    (fieldName, self.FLOOR_NUMBER_MIN, self.FLOOR_NUMBER_MAX, i))
+                    
+            return res
+
+#-----------------------------------------------------------------------------------------------------------------------
     def __init__(self, logger, configFilePath):
         self.__logger = logger
-        self.__configParser = configparser.ConfigParser()
-        self.__ddsCommunicatorConfig = otis_dds.communicator.DdsCommunicator.Configuration()
-        self.__secusysAcsConfig = secusys_acl.client.SecusysClient.Configuration()
+        self.__isRunning = False
+
+        configParser = configparser.ConfigParser()
+        ddsCommunicatorConfig = otis_dds.communicator.DdsCommunicator.Configuration()
+        secusysAcsConfig = secusys_acs.client.SecusysClient.Configuration()
 
         try:
-            self.__configParser.read(configFilePath)
-            self.__ddsCommunicatorConfig.heartbeatReceiveMcGroup = 
-                self.__configParser.get(self.__CONFIG_SECTION_DDS, "heartbeatReceiveMcGroup")
-            self.__ddsCommunicatorConfig.heartbeatReceivePort = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "heartbeatReceivePort")
-            self.__ddsCommunicatorConfig.heartbeatReceiveTimeout = 
-                self.__configParser.getfloat(self.__CONFIG_SECTION_DDS, "heartbeatReceiveTimeout")
-            self.__ddsCommunicatorConfig.heartbeatSendMcGroup = 
-                self.__configParser.get(self.__CONFIG_SECTION_DDS, "heartbeatSendMcGroup")
-            self.__ddsCommunicatorConfig.heartbeatSendPort = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "heartbeatSendPort")
-            self.__ddsCommunicatorConfig.heartbeatSendInterval = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "heartbeatSendInterval")
+            configParser.read(configFilePath)
 
-            self.__ddsCommunicatorConfig.interactiveReceivePortDes = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "interactiveReceivePortDes")
-            self.__ddsCommunicatorConfig.interactiveReceivePortDec = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "interactiveReceivePortDec")
-            self.__ddsCommunicatorConfig.interactiveSendPortDes = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "interactiveSendPortDes")
-            self.__ddsCommunicatorConfig.interactiveSendPortDec = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "interactiveSendPortDec")
-            self.__ddsCommunicatorConfig.interactiveDuplicatesCacheSize = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "interactiveDuplicatesCacheSize")
-            self.__ddsCommunicatorConfig.interactiveSendRetryIntreval = 
-                self.__configParser.getfloat(self.__CONFIG_SECTION_DDS, "heartbeatReceiveTimeout")
-            self.__ddsCommunicatorConfig.interactiveSendMaxRetries = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "interactiveSendMaxRetries")
+            # DDS Config section
+            configSection = self.__CONFIG_SECTION_DDS
 
-            self.__ddsCommunicatorConfig.localIp = 
-                self.__configParser.get(self.__CONFIG_SECTION_DDS, "localIp")
-            self.__ddsCommunicatorConfig.decOperationMode = 
-                self.__configParser.getint(self.__CONFIG_SECTION_DDS, "decOperationMode")
+            val = ddsCommunicatorConfig.heartbeatReceiveMcGroup = configParser.get(configSection, "heartbeatReceiveMcGroup")
+
+            try:
+                ipaddress.ip_address(val)
+            except:
+                raise ValueError("%s.heartbeatReceiveMcGroup must be a valid IP address. Got '%s'" % (configSection, val))
+
+            val = ddsCommunicatorConfig.heartbeatReceivePort = configParser.getint(configSection, "heartbeatReceivePort")
+
+            if val < 1 or val > 65535:
+                raise ValueError("%s.heartbeatReceivePort must be a valid UDP port. Got '%s'" % (configSection, val))
+
+            val = ddsCommunicatorConfig.heartbeatReceiveTimeout = configParser.getfloat(configSection, "heartbeatReceiveTimeout")
+
+            if val < 1.0:
+                raise ValueError("%s.heartbeatReceiveTimeout must be a at least 1.0. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.heartbeatSendMcGroup = configParser.get(configSection, "heartbeatSendMcGroup")
+
+            try:
+                ipaddress.ip_address(val)
+            except:
+                raise ValueError("%s.heartbeatSendMcGroup must be a valid IP address. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.heartbeatSendPort = configParser.getint(configSection, "heartbeatSendPort")
+
+            if val < 1 or val > 65535:
+                raise ValueError("%s.heartbeatSendPort must be a valid UDP port. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.heartbeatSendInterval = configParser.getfloat(configSection, "heartbeatSendInterval")
+
+            if val < 1.0:
+                raise ValueError("%s.heartbeatSendInterval must be a at least 1.0. Got '%s'" % (configSection, val))
+
+            val = ddsCommunicatorConfig.interactiveReceivePortDes = configParser.getint(configSection, "interactiveReceivePortDes")
+
+            if val < 1 or val > 65535:
+                raise ValueError("%s.interactiveReceivePortDes must be a valid UDP port. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.interactiveReceivePortDec = configParser.getint(configSection, "interactiveReceivePortDec")
+
+            if val < 1 or val > 65535:
+                raise ValueError("%s.interactiveReceivePortDec must be a valid UDP port. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.interactiveSendPortDes = configParser.getint(configSection, "interactiveSendPortDes")
+
+            if val < 1 or val > 65535:
+                raise ValueError("%s.interactiveSendPortDes must be a valid UDP port. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.interactiveSendPortDec = configParser.getint(configSection, "interactiveSendPortDec")
+
+            if val < 1 or val > 65535:
+                raise ValueError("%s.interactiveSendPortDec must be a valid UDP port. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.interactiveDuplicatesCacheSize = configParser.getint(configSection, "interactiveDuplicatesCacheSize")
+
+            if val < 1 or val > 100:
+                raise ValueError("%s.interactiveDuplicatesCacheSize must be between 1 and 100. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.interactiveSendRetryIntreval = configParser.getfloat(configSection, "interactiveSendRetryIntreval")
+
+            if val < 1.0:
+                raise ValueError("%s.interactiveSendRetryIntreval must be a at least 1.0. Got '%s'" % (configSection, val))
+            
+            val = ddsCommunicatorConfig.interactiveSendMaxRetries = configParser.getint(configSection, "interactiveSendMaxRetries")
+
+            if val < 1:
+                raise ValueError("%s.interactiveSendMaxRetries must be a at least 1. Got '%s'" % (configSection, val))
+
+            val = ddsCommunicatorConfig.localIp = configParser.get(configSection, "localIp")
+
+            try:
+                ipaddress.ip_address(val)
+            except:
+                raise ValueError("%s.localIp must be a valid IP address. Got '%s'" % (configSection, val))
+
+            val = ddsCommunicatorConfig.decOperationMode = configParser.getint(configSection, "decOperationMode")
+
+            if val < 1 or val > 4:
+                raise ValueError("%s.decOperationMode must be between 1 to 4. Got '%s'" % (configSection, val))
+
+            # ACS Config section
+            configSection = self.__CONFIG_SECTION_ACS
+
+            val = secusysAcsConfig.userName = configParser.get(configSection, "userName")
+
+            if not val:
+                raise ValueError("%s.userName must be provided. Got '%s'" % (configSection, val))
+
+            val = secusysAcsConfig.password = configParser.get(configSection, "password")
+
+            if not val:
+                raise ValueError("%s.password must be provided. Got '%s'" % (configSection, val))
+
+            val = secusysAcsConfig.wsdl = configParser.get(configSection, "wsdl")
+
+            if not val:
+                raise ValueError("%s.wsdl must be provided. Got '%s'" % (configSection, val))
+
+            val = groupsFilePath = configParser.get(configSection, "groupsFilePath")
+
+            if not val:
+                raise ValueError("%s.groupsFilePath must be provided. Got '%s'" % (configSection, val))
         
         except Exception as e:
             self.__logger.exception("Failed parsing configuration file: configFilePath=%s", configFilePath)
             raise
 
+        self.__secusysAcsClient = secusys_acs.client.SecusysClient(logger, secusysAcsConfig)
+        ssAdapter = self._SecuritySystemAdapterSecusys(logger, self.__secusysAcsClient, groupsFilePath)
+        self.__ddsCommunicator = otis_dds.communicator.DdsCommunicator(logger, ddsCommunicatorConfig, ssAdapter)
 
+#-----------------------------------------------------------------------------------------------------------------------
+    def start(self):
+        """ Start the bridge
+        """
+        if not self.__isRunning :
+            self.__logger.info("Starting Bridge!")
+            self.__secusysAcsClient.connect()
+            self.__ddsCommunicator.start()
+            self.__isRunning = True
 
+        else:
+            self.__logger.warning("Trying to start an already running Bridge")
 
+#-----------------------------------------------------------------------------------------------------------------------    
+    def stop(self):
+        """ Stop the bridge
+        """
+        if self.__isRunning :
+            self.__logger.info("Stopping Bridge!")
+            self.__ddsCommunicator.stop()
+            self.__secusysAcsClient.disconnect()
+            self.__isRunning = False
 
-# Config
-config = otis_dds.communicator.DdsCommunicator.Configuration()
-
-
-# Logger
-logger = logging.getLogger('Test Logger')
-logger.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(ch)
-
-# Security system integration
-class SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySystemAdapterInterface):
-
-    def __init__(self, logger, secusysClient):
-        self.__logger = logger
-        self.__secusysClient = secusysClient
-
-    @property
-    def allowedFloorsFront(self):
-        return [-3,10]
-
-    @property
-    def allowedFloorsRear(self):
-        return [-2,11]
-
-    def getAccessInfo(self,credentialData, credentialSizeBits):
-        return otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(
-            True, 
-            0, 
-            otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Front, 
-            [12,13], 
-            [14,15])
-
-secusysClient = secusys_acl.client.SecusysClient(logger, 'administrator', 'secusys', 'http://10.0.0.88:7070/SecusysWeb/WebService/AccessWS.asmx?WSDL')
-secusysClient.connect()
-print (secusysClient.getPersonnalIdByCardNo("000012"))
-print (secusysClient.getPersonnalIdByCardNo("00001234"))
-secusysAdapter = SecuritySystemAdapterSecusys(logger, secusysClient)
-ssDdsCommunicator = otis_dds.communicator.DdsCommunicator(logger, config, secusysAdapter)
-ssDdsCommunicator.start()
+        else:
+            self.__logger.warning("Trying to start an already running Bridge")
