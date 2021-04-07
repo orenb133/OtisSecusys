@@ -120,7 +120,7 @@ class DdsCommunicator:
         """ Start the DdsCommunicator
         """
         if not self.__shouldRun and self.__daemon is None:
-            self.__logger.info("Starting DDS communicator!")
+            self.__logger.info("Starting DDS Communicator...")
             self.__shouldRun = True
 
             try:
@@ -134,24 +134,24 @@ class DdsCommunicator:
                 raise
         
         else:
-            self.__logger.warning("DDS communicator is already started")
+            self.__logger.warning("DDS Communicator is already started")
 
 #-----------------------------------------------------------------------------------------------------------------------  
     def stop(self):
         """ Stop the DdsCommunicator
         """
         if self.__shouldRun:
-            self.__logger.info("Stopping DDS communicator!")
+            self.__logger.info("Stopping DDS Communicator...")
             self.__shouldRun = False
             self.__daemon.join()
             self.__daemon = None
-
+            self.__logger.info("Stopping DDS Communicator stopped!")
         else:
-           self.__logger.warning("DDS communicator is already stopped") 
+           self.__logger.warning("DDS Communicator is already stopped") 
 
  #-----------------------------------------------------------------------------------------------------------------------        
     def __mainLoop(self):
-        self.__logger.debug("Starting main-loop")
+        self.__logger.info("DDS Communicator started!")
 
         while self.__shouldRun:
             self.__handleHeartbeatSend()

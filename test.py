@@ -16,5 +16,5 @@ logger.addHandler(ch)
 
 b = bridge.Bridge(logger, "./bridge.cfg")
 b.start()
-time.sleep(5)
+time.sleep(20)
 b.stop()
