@@ -1,5 +1,6 @@
 import bridge
 import logging
+import time
 
 # Logger
 logger = logging.getLogger('Test Logger')
@@ -14,3 +15,6 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 b = bridge.Bridge(logger, "./bridge.cfg")
+b.start()
+time.sleep(5)
+b.stop()
