@@ -77,7 +77,7 @@ class DdsCommunicator:
 
         # Initialize receive MCast socket
         listenTuple = (configuration.localIp, configuration.heartbeatReceivePort)
-        self.__logger.info("Initializing recehive MCast socket: tuple=%s", listenTuple)
+        self.__logger.info("Initializing receive MCast socket: tuple=%s", listenTuple)
         self.__heartbeatReceiveSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__heartbeatReceiveSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         mcGroup = struct.pack('4sL', socket.inet_aton(configuration.heartbeatReceiveMcGroup), socket.INADDR_ANY)
@@ -145,7 +145,7 @@ class DdsCommunicator:
             self.__shouldRun = False
             self.__daemon.join()
             self.__daemon = None
-            self.__logger.info("Stopping DDS Communicator stopped!")
+            self.__logger.info("DDS Communicator stopped!")
         else:
            self.__logger.warning("DDS Communicator is already stopped") 
 
@@ -162,7 +162,7 @@ class DdsCommunicator:
 
 #-----------------------------------------------------------------------------------------------------------------------        
     def __registerPacketClass(self, packetClass):
-        self.__logger.info("Registering packet: packetClass=%s", packetClass)
+        self.__logger.debug("Registering packet: packetClass=%s", packetClass)
         self.__interactivePacketClasses[packetClass.TYPE] = packetClass
 
 #-----------------------------------------------------------------------------------------------------------------------  

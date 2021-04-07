@@ -79,6 +79,8 @@ class Bridge:
                 [12,13], 
                 [14,15])
 
+                #TODO: Now all is here
+
 #-----------------------------------------------------------------------------------------------------------------------  
         def __parseFloorList(self, rawFloorList, fieldName):
             res = []
@@ -238,7 +240,7 @@ class Bridge:
         """ Start the bridge
         """
         if not self.__isRunning :
-            self.__logger.info("Starting Bridge!")
+            self.__logger.info("Starting Bridge")
             self.__secusysAcsClient.connect()
             self.__ddsCommunicator.start()
             self.__isRunning = True
@@ -251,7 +253,7 @@ class Bridge:
         """ Stop the bridge
         """
         if self.__isRunning :
-            self.__logger.info("Stopping Bridge!")
+            self.__logger.info("Stopping Bridge")
             self.__ddsCommunicator.stop()
             self.__secusysAcsClient.disconnect()
             self.__isRunning = False
