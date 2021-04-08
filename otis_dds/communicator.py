@@ -62,6 +62,10 @@ class DdsCommunicator:
         self.__logger = logger
         self.__configuration = configuration
         self.__securitySystemAdapter = securitySystemAdapter
+        self.__heartbeatReceiveSocket = None
+        self.__heartbeatSendSocket = None
+        self.__interactiveSocketDes = None
+        self.__interactiveSocketDec = None
 
         self.__interactivePacketClasses = {}
         self.__interactivePacketsRectors = {}
@@ -74,38 +78,6 @@ class DdsCommunicator:
                                                              self.ICD_MINOR)
       
         self.__heartbeatSendPacketPacked = self.__heartbeatSendPacket.packed()
-
-        # Initialize receive MCast socket
-        listenTuple = (configuration.localIp, configuration.heartbeatReceivePort)
-        self.__logger.info("Initializing receive MCast socket: tuple=%s", listenTuple)
-        self.__heartbeatReceiveSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__heartbeatReceiveSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        mcGroup = struct.pack('4sL', socket.inet_aton(configuration.heartbeatReceiveMcGroup), socket.INADDR_ANY)
-        self.__heartbeatReceiveSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mcGroup)
-        self.__heartbeatReceiveSocket.bind(listenTuple)
-        self.__heartbeatReceiveSocket.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
-        
-        # Initialize send MCast socket
-        self.__logger.info("Initializing send MCast socket: ip=%s", configuration.localIp)
-        self.__heartbeatSendSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self.__heartbeatSendSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32) 
-        self.__heartbeatSendSocket.bind((configuration.localIp, 0))
-        
-        # Initializing Interactive DES socket
-        listenTuple = (configuration.localIp, configuration.interactiveReceivePortDes)
-        self.__logger.info("Initializing interactive DES socket: tuple=%s", listenTuple)
-        self.__interactiveSocketDes = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__interactiveSocketDes.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.__interactiveSocketDes.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
-        self.__interactiveSocketDes.bind(listenTuple)
-
-        # Initializing Interactive DEC socket
-        listenTuple = (configuration.localIp, configuration.interactiveReceivePortDec)
-        self.__logger.info("Initializing interactive DEC socket: tuple=%s", listenTuple)
-        self.__interactiveSocketDec = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__interactiveSocketDec.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.__interactiveSocketDec.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
-        self.__interactiveSocketDec.bind(listenTuple)
 
         # Registering Packets
         self.__registerPacketClass(packets._PacketInteractiveAck)
@@ -121,6 +93,39 @@ class DdsCommunicator:
         """
         if not self.__shouldRun and self.__daemon is None:
             self.__logger.info("Starting DDS Communicator...")
+
+            # Initialize receive MCast socket
+            listenTuple = (self.__configuration.localIp, self.__configuration.heartbeatReceivePort)
+            self.__logger.info("Initializing receive MCast socket: tuple=%s", listenTuple)
+            self.__heartbeatReceiveSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.__heartbeatReceiveSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            mcGroup = struct.pack('4sL', socket.inet_aton(self.__configuration.heartbeatReceiveMcGroup), socket.INADDR_ANY)
+            self.__heartbeatReceiveSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mcGroup)
+            self.__heartbeatReceiveSocket.bind(listenTuple)
+            self.__heartbeatReceiveSocket.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
+            
+            # Initialize send MCast socket
+            self.__logger.info("Initializing send MCast socket: ip=%s", self.__configuration.localIp)
+            self.__heartbeatSendSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            self.__heartbeatSendSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32) 
+            self.__heartbeatSendSocket.bind((self.__configuration.localIp, 0))
+            
+            # Initializing Interactive DES socket
+            listenTuple = (self.__configuration.localIp, self.__configuration.interactiveReceivePortDes)
+            self.__logger.info("Initializing interactive DES socket: tuple=%s", listenTuple)
+            self.__interactiveSocketDes = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.__interactiveSocketDes.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.__interactiveSocketDes.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
+            self.__interactiveSocketDes.bind(listenTuple)
+
+            # Initializing Interactive DEC socket
+            listenTuple = (self.__configuration.localIp, self.__configuration.interactiveReceivePortDec)
+            self.__logger.info("Initializing interactive DEC socket: tuple=%s", listenTuple)
+            self.__interactiveSocketDec = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.__interactiveSocketDec.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.__interactiveSocketDec.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
+            self.__interactiveSocketDec.bind(listenTuple)
+
             self.__shouldRun = True
 
             try:
@@ -145,6 +150,12 @@ class DdsCommunicator:
             self.__shouldRun = False
             self.__daemon.join()
             self.__daemon = None
+
+            self.__heartbeatReceiveSocket.close()
+            self.__heartbeatSendSocket.close()
+            self.__interactiveSocketDes.close()
+            self.__interactiveSocketDec.close()
+
             self.__logger.info("DDS Communicator stopped!")
         else:
            self.__logger.warning("DDS Communicator is already stopped") 

@@ -200,7 +200,7 @@ class _InteractiveReactor:
                             self.__unAckedBacklog[packetId] = unAckedSentPacket
                     
                         else:
-                            self.__logger.info("Reached retry limit for un-acked sent packet:" + 
+                            self.__logger.debug("Reached retry limit for un-acked sent packet:" + 
                                                 "packetId=%s peerTuple=%s retryCount=%s", 
                                                 unAckedSentPacket.packet[0], 
                                                 unAckedSentPacket.peerTuple, 

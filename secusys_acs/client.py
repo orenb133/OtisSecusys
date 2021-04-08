@@ -92,8 +92,13 @@ class SecusysClient:
                     self.__logger.error("Ambiguity, expecting a single personnal ID: cardNo=%s response=%s", 
                                         cardNo, response)
 
+            elif response.head.errorCode == -1:
+                # Consitered as not found
+                self.__logger.debug("Received no data from API: cardNo=%s response=%s", cardNo, response)
+           
             else:
                 self.__logger.error("Received an error from API: cardNo=%s response=%s", cardNo, response)
+      
         except:
             self.__logger.exception("Failed requesting info for card: cardNo=%s", cardNo)
 
@@ -125,6 +130,10 @@ class SecusysClient:
 
                 for item in response.body['Item']:
                     res.append(item['SecurityGroupName'])
+
+            elif response.head.errorCode == -1:
+                # Consitered as not found
+                self.__logger.debug("Received no data from API: personalId=%s response=%s", personalId, response)
 
             else:
                 self.__logger.error("Received an error from API: personalId=%s response=%s", personalId, response)
