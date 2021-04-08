@@ -53,8 +53,7 @@ class Bridge:
                                     raise ValueError("%s.%s list must not overlap with %s.%s. Found %s" % 
                                                      (section, key, *allowedPath, i))
                            
-                                else:
-                                    self.__groups[section] = floorsList
+                            self.__groups[section] = floorsList
 
             except Exception as e:
                 self.__logger.exception("Failed parsing groups file: groupsFilePath=%s", groupsFilePath)
