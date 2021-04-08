@@ -104,10 +104,10 @@ class SecusysClient:
         """ Get a list of a person security groups by its personal ID
         Params:
             personalId: Personal ID
-        Return: A list of security groups names on success | None
+        Return: A list of security groups names on success | Empy list
         """
         validCode = self.__createValidCode()
-        res = None
+        res = []
 
         try:
             self.__logger.debug("Requesting security groups for personal ID: personalId=%s", personalId)
@@ -122,7 +122,9 @@ class SecusysClient:
             self.__logger.debug("Received response for personal ID: personalId=%s response=%s", personalId, response)
 
             if response.head.errorCode == 0:
-                print (response)
+
+                for item in response.body['Item']:
+                    res.append(item['SecurityGroupName'])
 
             else:
                 self.__logger.error("Received an error from API: personalId=%s response=%s", personalId, response)
