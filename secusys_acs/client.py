@@ -60,7 +60,12 @@ class SecusysClient:
         self.__client = None
 
 #-----------------------------------------------------------------------------------------------------------------------
-    def getPersonnalIdByCardNo(self, cardNo):
+    def getPersonalIdByCardNo(self, cardNo):
+        """ Get a personal ID by its card number
+        Params:
+            cardNo: Card number as string
+        Return: Personal ID on success | None
+        """
         validCode = self.__createValidCode()
         res = None
 
@@ -91,6 +96,38 @@ class SecusysClient:
                 self.__logger.error("Received an error from API: cardNo=%s response=%s", cardNo, response)
         except:
             self.__logger.exception("Failed requesting info for card: cardNo=%s", cardNo)
+
+        return res
+
+#-----------------------------------------------------------------------------------------------------------------------
+    def getPersonSecurityGroupsByPersonalId(self, personalId):
+        """ Get a list of a person security groups by its personal ID
+        Params:
+            personalId: Personal ID
+        Return: A list of security groups names on success | None
+        """
+        validCode = self.__createValidCode()
+        res = None
+
+        try:
+            self.__logger.debug("Requesting info for card: cardNo=%s", cardNo)
+
+            rawResponse = self.__client.service.GetPersonAccessSecurityGroups(AppKey = self.__configuration.userName, 
+                                                             TimeStamp = validCode.timeStamp, 
+                                                             PersonnalID = personalId,
+                                                             ValidCode = validCode.md5Hash)
+
+            response = self.__parseResponse('GetPersonAccessSecurityGroups', rawResponse)
+
+            self.__logger.debug("Received response for personal ID: personalId=%s response=%s", personalId, response)
+
+            if response.head.errorCode == 0:
+                print (response)
+
+            else:
+                self.__logger.error("Received an error from API: personalId=%s response=%s", personalId, response)
+        except:
+            self.__logger.exception("Failed requesting security groups for personal ID: personalId=%s", personalId)
 
         return res
 
