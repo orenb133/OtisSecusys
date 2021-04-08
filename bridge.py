@@ -16,6 +16,7 @@ class Bridge:
 
         __CONFIG_SECTION_ALLOWED = 'ALLOWED'
         __CONFIG_KEY_FLOORS = 'floors'
+        __SECURITY_GROUP_PREFIX = "DDS."
 
         def __init__(self, logger, secusysClient, groupsFilePath):
             """ C'tor
@@ -72,14 +73,25 @@ class Bridge:
 
 #----------------------------------------------------------------------------------------------------------------------- 
         def getAccessInfo(self,credentialData, credentialSizeBits):
+
+            isValid = False
+            personalId = self.__secusysClient.getPersonalIdByCardNo(int.from_bytes(credentialData, 'big'))
+            floors = []
+            
+            if personalId:
+                isValid = True
+                securityGroups = self.__secusysClient.getPersonSecurityGroupsByPersonalId(personalId)
+
+                for group in securityGroups:
+                    if group.startswith(self.__SECURITY_GROUP_PREFIX):
+                        floors.extend(self.__groups.get(group, []))
+
             return otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(
-                True, 
+                isValid, 
                 0, 
                 otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Front, 
-                [12,13], 
-                [14,15])
-
-                #TODO: Now all is here
+                floors, 
+                []) # Not supporting rear
 
 #-----------------------------------------------------------------------------------------------------------------------  
         def __parseFloorList(self, rawFloorList, fieldName):
