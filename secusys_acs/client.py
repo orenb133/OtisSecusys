@@ -110,7 +110,7 @@ class SecusysClient:
         res = None
 
         try:
-            self.__logger.debug("Requesting info for card: cardNo=%s", cardNo)
+            self.__logger.debug("Requesting security groups for personal ID: personalId=%s", personalId)
 
             rawResponse = self.__client.service.GetPersonAccessSecurityGroups(AppKey = self.__configuration.userName, 
                                                              TimeStamp = validCode.timeStamp, 
