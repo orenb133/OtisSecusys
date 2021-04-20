@@ -4,6 +4,8 @@ import secusys_acs.client
 import logging
 import configparser
 import ipaddress
+import os 
+import sys
 
 #======================================================================================================================
 class Bridge:
@@ -137,7 +139,7 @@ class Bridge:
 
             val = rawLogLevel = configParser.get(configSection, "level")
 
-            if val not in ['E,W,I,D']:
+            if val not in ['E','W','I','D']:
                 raise ValueError("%s.level must be one of E, W, I, D. Got '%s'" % (configSection, val))
 
             # DDS Config section
@@ -246,6 +248,10 @@ class Bridge:
 
             if not val:
                 raise ValueError("%s.groupsFilePath must be provided. Got '%s'" % (configSection, val))
+
+            # In case of local directory, extend it to full path
+            if groupsFilePath.startswith(os.path.curdir):
+                groupsFilePath = os.path.join(os.path.dirname(sys.executable), groupsFilePath)
         
         except Exception as e:
             self.__logger.exception("Failed parsing configuration file: configFilePath=%s", configFilePath)

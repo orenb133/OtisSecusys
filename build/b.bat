@@ -1,0 +1,1 @@
+pyinstaller.exe --onefile --hidden-import win32timezone service.py bridge.py
