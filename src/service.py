@@ -1,51 +1,92 @@
+import logging
+import sys 
+import servicemanager
+import win32serviceutil  
+import win32service  
+import win32event
+import win32evtlog
+import win32evtlogutil
+import servicemanager  
 import time
+import logging
+import time 
+import os
+import bridge
 
-import win32serviceutil  # ServiceFramework and commandline helper
-import win32service  # Events
-import servicemanager  # Simple setup and logging
+#======================================================================================================================
+class Service(win32serviceutil.ServiceFramework):
+    
+    _svc_name_ = 'DdsAcsBridge'
+    _svc_display_name_ = 'DDS ACS Bridge'
+    _svc_description_ = 'A SW Bridge connecting a DDS to a Security System providing access control'
 
-class MyService:
-    """Silly little application stub"""
-    def stop(self):
-        """Stop the service"""
-        self.running = False
+    __CONFIG_FILE_PATH = os.path.join(os.path.dirname(sys.executable), "bridge.cfg")
 
-    def run(self):
-        """Main service loop. This is where work is done!"""
-        self.running = True
-        while self.running:
-            time.sleep(10)  # Important work
-            servicemanager.LogInfoMsg("Service running...")
+#-----------------------------------------------------------------------------------------------------------------------
+    class _LoggerHandler(logging.Handler):
+      
+        def emit(self, record):
 
+            severity = win32evtlog.EVENTLOG_INFORMATION_TYPE
 
-class MyServiceFramework(win32serviceutil.ServiceFramework):
+            if record.levelno >= logging.ERROR:
+               severity = win32evtlog.EVENTLOG_ERROR_TYPE
+       
+            elif record.levelno == logging.WARNING:
+               severity = win32evtlog.EVENTLOG_WARNING_TYPE
 
-    _svc_name_ = 'MyService'
-    _svc_display_name_ = 'My Service display name'
+            win32evtlogutil.ReportEvent(Service._svc_name_, 
+                                        record.lineno, 
+                                        0,
+                                        eventType=severity, 
+                                        strings=[record.getMessage()])
+ 
+#-----------------------------------------------------------------------------------------------------------------------
+    def __init__(self, args):
+        win32serviceutil.ServiceFramework.__init__(self, args)
+        win32evtlogutil.AddSourceToRegistry(self._svc_display_name_, sys.executable, 'Application')
+        
+        self.__stopEvent = win32event.CreateEvent(None, 0, 0, None)
+        self.__shouldRun = False
 
-    def SvcStop(self):
-        """Stop the service"""
-        self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        self.service_impl.stop()
-        self.ReportServiceStatus(win32service.SERVICE_STOPPED)
+        loggerHandler = self._LoggerHandler()
+        loggerHandler.setFormatter(logging.Formatter('p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s'))
+        logger = logging.getLogger(self._svc_name_)
+        logger.addHandler(loggerHandler)
+        logger.setLevel(logging.DEBUG)
 
+        self.__bridge = bridge.Bridge(logger, self.__CONFIG_FILE_PATH)
+
+#-----------------------------------------------------------------------------------------------------------------------
     def SvcDoRun(self):
-        """Start the service; does not return until stopped"""
+        
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-        self.service_impl = MyService()
+        
+        self.__shouldRun = True
+        self.__bridge.start()
+      
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-        # Run the service
-        self.service_impl.run()
 
+        while self.__shouldRun:
+            time.sleep(0.1)
 
-def init():
+#-----------------------------------------------------------------------------------------------------------------------
+    def SvcStop(self):
+        self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+      
+        self.__bridge.stop()
+        self.__shouldRun = False
+        win32event.SetEvent(self.__stopEvent)
+      
+        self.ReportServiceStatus(win32service.SERVICE_STOP)
+    
+
+#-----------------------------------------------------------------------------------------------------------------------   
+if __name__ == '__main__':
+ 
     if len(sys.argv) == 1:
         servicemanager.Initialize()
-        servicemanager.PrepareToHostSingle(MyServiceFramework)
+        servicemanager.PrepareToHostSingle(Service)
         servicemanager.StartServiceCtrlDispatcher()
     else:
-        win32serviceutil.HandleCommandLine(MyServiceFramework)
-
-
-if __name__ == '__main__':
-    init()
+        win32serviceutil.HandleCommandLine(Service)

@@ -10,6 +10,7 @@ class Bridge:
 
     __CONFIG_SECTION_DDS = 'DDS'
     __CONFIG_SECTION_ACS = 'ACS'
+    __CONFIG_SECTION_LOGGER = 'Logger'
 
 #-----------------------------------------------------------------------------------------------------------------------
     class _SecuritySystemAdapterSecusys(otis_dds.security_system_adapter.SecuritySystemAdapterInterface):
@@ -131,6 +132,14 @@ class Bridge:
         try:
             configParser.read(configFilePath)
 
+            # Logger Config section
+            configSection = self.__CONFIG_SECTION_LOGGER
+
+            val = rawLogLevel = configParser.get(configSection, "level")
+
+            if val not in ['E,W,I,D']:
+                raise ValueError("%s.level must be one of E, W, I, D. Got '%s'" % (configSection, val))
+
             # DDS Config section
             configSection = self.__CONFIG_SECTION_DDS
 
@@ -242,6 +251,7 @@ class Bridge:
             self.__logger.exception("Failed parsing configuration file: configFilePath=%s", configFilePath)
             raise
 
+        self.__configureLogLevel(rawLogLevel)
         self.__secusysAcsClient = secusys_acs.client.SecusysClient(logger, secusysAcsConfig)
         ssAdapter = self._SecuritySystemAdapterSecusys(logger, self.__secusysAcsClient, groupsFilePath)
         self.__ddsCommunicator = otis_dds.communicator.DdsCommunicator(logger, ddsCommunicatorConfig, ssAdapter)
@@ -271,3 +281,20 @@ class Bridge:
 
         else:
             self.__logger.warning("Trying to start an already running Bridge")
+
+#-----------------------------------------------------------------------------------------------------------------------    
+    def __configureLogLevel(self, rawLogLevel):
+        level = None
+        
+        if rawLogLevel == 'E':
+            level = logging.ERROR
+        elif rawLogLevel == 'W':
+            level = logging.WARNING
+        elif rawLogLevel == 'I':
+            level = logging.INFO
+        elif rawLogLevel == 'D':
+            level = logging.DEBUG
+        else:
+            raise ValueError("Unknown log level received: rawLogLevel=%s" % rawLogLevel)
+
+        self.__logger.setLevel(level)
