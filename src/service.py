@@ -51,11 +51,11 @@ class Service(win32serviceutil.ServiceFramework):
 
         loggerHandler = self._LoggerHandler()
         loggerHandler.setFormatter(logging.Formatter('p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s'))
-        logger = logging.getLogger(self._svc_name_)
-        logger.addHandler(loggerHandler)
-        logger.setLevel(logging.DEBUG)
+        self.__logger = logging.getLogger(self._svc_name_)
+        self.__logger.addHandler(loggerHandler)
 
-        self.__bridge = bridge.Bridge(logger, self.__CONFIG_FILE_PATH)
+
+        self.__bridge = bridge.Bridge(self.__logger, self.__CONFIG_FILE_PATH)
 
 #-----------------------------------------------------------------------------------------------------------------------
     def SvcDoRun(self):
@@ -75,6 +75,7 @@ class Service(win32serviceutil.ServiceFramework):
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
       
         self.__bridge.stop()
+        self.__logger.warning("Im here")
         self.__shouldRun = False
         win32event.SetEvent(self.__stopEvent)
       
