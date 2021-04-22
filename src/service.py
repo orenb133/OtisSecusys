@@ -76,8 +76,6 @@ class Service(win32serviceutil.ServiceFramework):
         self.__bridge.stop()
         self.__shouldRun = False
         win32event.SetEvent(self.__stopEvent)
-        self.__logger.warning("Im here")
-    
 
 #-----------------------------------------------------------------------------------------------------------------------   
 if __name__ == '__main__':
