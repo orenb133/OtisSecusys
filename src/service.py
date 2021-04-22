@@ -39,7 +39,7 @@ class Service(win32serviceutil.ServiceFramework):
                                         record.lineno, 
                                         0,
                                         eventType=severity, 
-                                        strings=[record.getMessage()])
+                                        strings=[self.format(record)])
  
 #-----------------------------------------------------------------------------------------------------------------------
     def __init__(self, args):
