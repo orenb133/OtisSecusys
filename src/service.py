@@ -50,7 +50,7 @@ class Service(win32serviceutil.ServiceFramework):
         self.__shouldRun = False
 
         loggerHandler = self._LoggerHandler()
-        loggerHandler.setFormatter(logging.Formatter('p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s'))
+        loggerHandler.setFormatter(logging.Formatter('%(process)s - [%(pathname)s:%(lineno)d] %(levelname)s - %(message)s'))
         self.__logger = logging.getLogger(self._svc_name_)
         self.__logger.addHandler(loggerHandler)
 
