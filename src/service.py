@@ -76,8 +76,8 @@ class Service(win32serviceutil.ServiceFramework):
         self.__bridge.stop()
         self.__shouldRun = False
         win32event.SetEvent(self.__stopEvent)
-        self.__logger.warning("Im here")
         self.ReportServiceStatus(win32service.SERVICE_STOP)
+        self.__logger.warning("Im here")
     
 
 #-----------------------------------------------------------------------------------------------------------------------   
