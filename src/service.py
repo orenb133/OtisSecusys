@@ -54,7 +54,6 @@ class Service(win32serviceutil.ServiceFramework):
         self.__logger = logging.getLogger(self._svc_name_)
         self.__logger.addHandler(loggerHandler)
 
-
         self.__bridge = bridge.Bridge(self.__logger, self.__CONFIG_FILE_PATH)
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -75,10 +74,9 @@ class Service(win32serviceutil.ServiceFramework):
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
       
         self.__bridge.stop()
-        self.__logger.warning("Im here")
         self.__shouldRun = False
         win32event.SetEvent(self.__stopEvent)
-      
+        self.__logger.warning("Im here")
         self.ReportServiceStatus(win32service.SERVICE_STOP)
     
 
