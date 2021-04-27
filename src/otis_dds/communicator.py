@@ -99,8 +99,10 @@ class DdsCommunicator:
             self.__logger.info("Initializing receive MCast socket: tuple=%s", listenTuple)
             self.__heartbeatReceiveSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.__heartbeatReceiveSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            mcGroup = struct.pack('4sL', socket.inet_aton(self.__configuration.heartbeatReceiveMcGroup), socket.INADDR_ANY)
-            self.__heartbeatReceiveSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mcGroup)
+            mreq = struct.pack('4s4s', socket.inet_aton(self.__configuration.heartbeatReceiveMcGroup), 
+                               socket.inet_aton(self.__configuration.localIp))
+            
+            self.__heartbeatReceiveSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
             self.__heartbeatReceiveSocket.bind(listenTuple)
             self.__heartbeatReceiveSocket.settimeout(self.__PACKET_RECV_SOCKET_TIMEOUT)
             
