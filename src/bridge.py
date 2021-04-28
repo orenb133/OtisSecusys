@@ -21,16 +21,20 @@ class Bridge:
         __CONFIG_KEY_FLOORS = 'floors'
         __SECURITY_GROUP_PREFIX = "DDS."
 
-        def __init__(self, logger, secusysClient, groupsFilePath):
+        def __init__(self, logger, secusysClient, groupsFilePath, credentialsBitsEndianity, credentialsBitsMask):
             """ C'tor
             Params:
                 logger: Python logging interface
                 secusysClient: Secusys client to addapt to
                 groupsFilePath: Groups mapping file path
+                credentialsBitsEndianity: Expected endianity of received credentials
+                credentialsBitsMask: Mask size to use over credentials bits
             """
 
             self.__logger = logger
             self.__secusysClient = secusysClient
+            self.__credentialsBitsEndianity = credentialsBitsEndianity
+            self.__credentialsBitsMask = credentialsBitsMask
             self.__groups = {}
             
             configParser = configparser.ConfigParser()
@@ -77,7 +81,11 @@ class Bridge:
         def getAccessInfo(self,credentialData, credentialSizeBits):
 
             isValid = False
-            personalId = self.__secusysClient.getPersonalIdByCardNo(int.from_bytes(credentialData, 'big'))
+            personalId = self.__secusysClient.getPersonalIdByCardNo(int.from_bytes(credentialData, self.__credentialsBitsEndianity))
+
+            if self.__credentialsBitsMask > 0 and self.__credentialsBitsMask <= credentialSizeBits:
+                personalId = personalId & (0xffffffff >> (32 - self.__credentialsBitsMask))
+
             floors = []
             
             if personalId:
@@ -252,6 +260,16 @@ class Bridge:
             # In case of local directory, extend it to full path
             if groupsFilePath.startswith(os.path.curdir):
                 groupsFilePath = os.path.join(os.path.dirname(sys.executable), groupsFilePath)
+
+            val = credentialsBitsEndianity = configParser.getint(configSection, "credentialsBitsEndianity")
+
+            if val not in ('little', 'big'):
+                raise ValueError("%s.credentialsBitsEndianity must be one of little, big. Got '%s'" % (configSection, val))
+
+            val = credentialsBitsMask = configParser.getint(configSection, "credentialsBitsMask")
+
+            if val < 0 or val > 32:
+                raise ValueError("%s.credentialsBitsMask must be between 0 to 32. Got '%s'" % (configSection, val))
         
         except Exception as e:
             self.__logger.exception("Failed parsing configuration file: configFilePath=%s", configFilePath)
@@ -259,7 +277,7 @@ class Bridge:
 
         self.__configureLogLevel(rawLogLevel)
         self.__secusysAcsClient = secusys_acs.client.SecusysClient(logger, secusysAcsConfig)
-        ssAdapter = self._SecuritySystemAdapterSecusys(logger, self.__secusysAcsClient, groupsFilePath)
+        ssAdapter = self._SecuritySystemAdapterSecusys(logger, self.__secusysAcsClient, groupsFilePath, credentialsBitsEndianity, credentialsBitsMask)
         self.__ddsCommunicator = otis_dds.communicator.DdsCommunicator(logger, ddsCommunicatorConfig, ssAdapter)
 
 #-----------------------------------------------------------------------------------------------------------------------
