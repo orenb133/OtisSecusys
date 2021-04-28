@@ -261,7 +261,7 @@ class Bridge:
             if groupsFilePath.startswith(os.path.curdir):
                 groupsFilePath = os.path.join(os.path.dirname(sys.executable), groupsFilePath)
 
-            val = credentialsBitsEndianity = configParser.getint(configSection, "credentialsBitsEndianity")
+            val = credentialsBitsEndianity = configParser.get(configSection, "credentialsBitsEndianity")
 
             if val not in ('little', 'big'):
                 raise ValueError("%s.credentialsBitsEndianity must be one of little, big. Got '%s'" % (configSection, val))
