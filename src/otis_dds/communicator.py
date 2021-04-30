@@ -109,7 +109,7 @@ class DdsCommunicator:
             # Initialize send MCast socket
             self.__logger.info("Initializing send MCast socket: ip=%s", self.__configuration.localIp)
             self.__heartbeatSendSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            self.__heartbeatSendSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32) 
+            self.__heartbeatSendSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255) 
             self.__heartbeatSendSocket.bind((self.__configuration.localIp, 0))
             
             # Initializing Interactive DES socket
