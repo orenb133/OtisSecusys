@@ -80,11 +80,13 @@ class Bridge:
 #----------------------------------------------------------------------------------------------------------------------- 
         def getAccessInfo(self,credentialData, credentialSizeBits):
 
-            isValid = False
-            personalId = self.__secusysClient.getPersonalIdByCardNo(int.from_bytes(credentialData, self.__credentialsBitsEndianity))
+            cardNo = int.from_bytes(credentialData, self.__credentialsBitsEndianity)
 
             if self.__credentialsBitsMask > 0 and self.__credentialsBitsMask <= credentialSizeBits:
-                personalId = personalId & (0xffffffff >> (32 - self.__credentialsBitsMask))
+                cardNo = cardNo & (0xffffffff >> (32 - self.__credentialsBitsMask))
+
+            isValid = False
+            personalId = self.__secusysClient.getPersonalIdByCardNo(cardNo)
 
             floors = []
             
