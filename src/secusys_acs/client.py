@@ -128,6 +128,10 @@ class SecusysClient:
 
             if response.head.errorCode == 0:
 
+                if not isinstance(items, list): 
+                    # In case of a single item, wrap in a list
+                    items = [items]               
+
                 for item in response.body['Item']:
                     res.append(item['SecurityGroupName'])
 

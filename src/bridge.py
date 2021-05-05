@@ -98,12 +98,16 @@ class Bridge:
                     if group.startswith(self.__SECURITY_GROUP_PREFIX):
                         floors.extend(self.__groups.get(group, []))
 
-            return otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(
+            accessInfo = otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo(
                 isValid, 
                 0, 
                 otis_dds.security_system_adapter.SecuritySystemAdapterInterface.AccessInfo.DoorType.Front, 
                 floors, 
                 []) # Not supporting rear
+
+            self.__logger.info("Access requested: carNumber=%s, accessInfo=%s", cardNo, accessInfo)
+
+            return response
 
 #-----------------------------------------------------------------------------------------------------------------------  
         def __parseFloorList(self, rawFloorList, fieldName):
