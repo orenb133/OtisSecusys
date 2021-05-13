@@ -127,6 +127,7 @@ class SecusysClient:
             self.__logger.debug("Received response for personal ID: personalId=%s response=%s", personalId, response)
 
             if response.head.errorCode == 0:
+                items = response.body['Item']
 
                 if not isinstance(items, list): 
                     # In case of a single item, wrap in a list

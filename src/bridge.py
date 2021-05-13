@@ -107,7 +107,7 @@ class Bridge:
 
             self.__logger.info("Access requested: carNumber=%s, accessInfo=%s", cardNo, accessInfo)
 
-            return response
+            return accessInfo
 
 #-----------------------------------------------------------------------------------------------------------------------  
         def __parseFloorList(self, rawFloorList, fieldName):
