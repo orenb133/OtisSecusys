@@ -133,7 +133,7 @@ class SecusysClient:
                     # In case of a single item, wrap in a list
                     items = [items]               
 
-                for item in response.body['Item']:
+                for item in items:
                     res.append(item['SecurityGroupName'])
 
             elif response.head.errorCode == -1:
