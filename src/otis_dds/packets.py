@@ -5,9 +5,25 @@ import typing
 import dataclasses
 import collections
 import math
+import random
 
 from . import security_system_adapter
 
+#======================================================================================================================
+class _IdAllocator:
+
+#----------------------------------------------------------------------------------------------------------------------
+    def __init__(self):
+        # Between 0 to max of 32 bits
+        self.__id = random.randint(0, (1 << 32)-1)
+
+#----------------------------------------------------------------------------------------------------------------------
+    def allocate(self):
+        res = self.__id
+        self.__id = self.__id + 1
+        
+        return res
+    
 #======================================================================================================================
 class _InteractiveReactor:
 
@@ -25,12 +41,13 @@ class _InteractiveReactor:
             retryCount    : int = 0
 
 #----------------------------------------------------------------------------------------------------------------------
-        def __init__(self, logger, desIp, configuration, desSocket, decSocket, packetClasses, securitySystemAdapter):
+        def __init__(self, logger, desIp, configuration, desSocket, decSocket, packetClasses, idAllocator, 
+                    securitySystemAdapter):
+
             self.__logger = logger
             self.__desIp = desIp
             self.__lastHeartbeatTime = 0
             self.__isDesOnline  = False
-            self.__sequenceNumber = 0
             self.__onlineDecMap = [0] * 256
             self.__duplicatesCache = collections.OrderedDict()
             self.__unAckedBacklog = collections.OrderedDict()
@@ -48,6 +65,7 @@ class _InteractiveReactor:
                                            self.__configuration.interactiveReceivePortDec : self.DenChannelType.Dec}
             self.__packetClasses = packetClasses
             self.__securitySystemAdapter = securitySystemAdapter
+            self.__idAllocator = idAllocator
 
 #----------------------------------------------------------------------------------------------------------------------
         @property
@@ -58,11 +76,6 @@ class _InteractiveReactor:
         @property
         def isDesOnline(self):
             return self.__isDesOnline
-
-#----------------------------------------------------------------------------------------------------------------------
-        @property
-        def sequenceNumber(self):
-            return self.__sequenceNumber
 
 #----------------------------------------------------------------------------------------------------------------------
         @property
@@ -80,6 +93,10 @@ class _InteractiveReactor:
             self.__onlineDecMap = onlineDecMap
 
 #----------------------------------------------------------------------------------------------------------------------
+        def allocateId(self):
+            return self.__idAllocator.allocate()
+
+#----------------------------------------------------------------------------------------------------------------------
         def sendPacket(self, packet, peerIp, denChannel):
             """ Send a packet
             Params:
@@ -92,7 +109,6 @@ class _InteractiveReactor:
             peerTuple = (peerIp, self.__denSendPortByChannel[denChannel])
             self.__denSocketsByChannel[denChannel].sendto(packet.packed(), peerTuple)
             self.__unAckedBacklog[packet[0]] = self._UnAackedSentPacket(packet, peerTuple, time.monotonic(), denChannel)
-            self.__sequenceNumber = self.__sequenceNumber + 1
             self.__logger.debug("Sending interactie packet: packet=%s peerTuple=%s", packet, peerIp)
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -383,7 +399,7 @@ class _PacketInteractiveDecOnlineStatus(typing.NamedTuple, _PacketInteractiveBas
                     reactor.logger.info("DEC changed state to Online, configuring operation mode: decIp=%s mode=%s", 
                                         decIp, configuration.decOperationMode)
                  
-                    packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.sequenceNumber, 
+                    packet = _PacketInteractiveDecSecurityOperationModeV2(reactor.allocateId(), 
                                                                         [0] * 8, # Not using features
                                                                         configuration.decOperationMode, 
                                                                         allowedFloorsFront,
@@ -533,7 +549,7 @@ class _PacketInteractiveDecSecurityCredentialData(typing.NamedTuple, _PacketInte
             defaultDoorType = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2.DoorType.Rear
 
         decIp = "%s.%s.%s" % ('.'.join(reactor.desIp.split('.')[0:2]), self.decSubnetId, self.decId)
-        packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(reactor.sequenceNumber,
+        packet = _PacketInteractiveDecSecurityAutorizedDefaultFloorV2(reactor.allocateId(),
                                                 accessInfo.isValid,
                                                 self.credentialDataBytes,
                                                 configuration.decOperationMode,

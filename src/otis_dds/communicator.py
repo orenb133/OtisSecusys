@@ -66,6 +66,7 @@ class DdsCommunicator:
         self.__heartbeatSendSocket = None
         self.__interactiveSocketDes = None
         self.__interactiveSocketDec = None
+        self.__packetIdAllocator = packets._IdAllocator()
 
         self.__interactivePacketClasses = {}
         self.__interactivePacketsRectors = {}
@@ -260,6 +261,7 @@ class DdsCommunicator:
                                                                             self.__interactiveSocketDes, 
                                                                             self.__interactiveSocketDec, 
                                                                             self.__interactivePacketClasses,
+                                                                            self.__packetIdAllocator,
                                                                             self.__securitySystemAdapter)
 
                     self.__interactivePacketsRectors[reactorKey] = interactivePacketsReactor
